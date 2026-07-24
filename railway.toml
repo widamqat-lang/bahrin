@@ -1,0 +1,21 @@
+[ Railway Configuration File ]
+
+# ============================================
+# مواشي البحرين - Railway Configuration
+# ============================================
+
+# Since this is a monorepo, we deploy each service separately
+# Use the individual railway.json files in each artifact folder
+
+# Default build configuration
+[build]
+  builder = "NIXPACKS"
+
+[deploy]
+  numReplicas = 1
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 10
+
+# Start command (will be overridden by individual services)
+[start]
+  cmd = "echo 'Use individual service deployments'"
