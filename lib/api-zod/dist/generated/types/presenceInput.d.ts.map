@@ -1,0 +1,1 @@
+{"version":3,"file":"presenceInput.d.ts","sourceRoot":"","sources":["../../../src/generated/types/presenceInput.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,WAAW,aAAa;IAC5B,mBAAmB;IACnB,SAAS,EAAE,MAAM,CAAC;IAClB,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,MAAM,CAAC;IACd,gBAAgB;IAChB,YAAY,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;CAC9B"}

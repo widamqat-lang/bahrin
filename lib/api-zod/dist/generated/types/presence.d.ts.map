@@ -1,0 +1,1 @@
+{"version":3,"file":"presence.d.ts","sourceRoot":"","sources":["../../../src/generated/types/presence.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,WAAW,QAAQ;IACvB,SAAS,EAAE,MAAM,CAAC;IAClB,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,MAAM,CAAC;IACd,gBAAgB;IAChB,YAAY,EAAE,MAAM,GAAG,IAAI,CAAC;IAC5B,UAAU,EAAE,IAAI,CAAC;IACjB,MAAM,EAAE,OAAO,CAAC;CACjB"}
