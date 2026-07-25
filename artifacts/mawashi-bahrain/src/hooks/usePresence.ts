@@ -77,20 +77,22 @@ export function usePresence(options: UsePresenceOptions = {}) {
 
   // Get API URL
   const getWsUrl = useCallback(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    let baseUrl = apiUrl;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    let host;
     
-    // Remove trailing slash
-    baseUrl = baseUrl.replace(/\/$/, "");
+    if (apiUrl && apiUrl.trim()) {
+      // Remove trailing slash and protocol
+      host = apiUrl.replace(/\/$/, "").replace(/^https?:\/\//, "");
+    } else {
+      // Use current window location
+      host = window.location.host;
+    }
     
     // Determine protocol
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     
-    // Extract host from API URL or use current host
-    let host = baseUrl.replace(/^https?:\/\//, "");
-    
     const sessionId = getSessionId();
-    return `${protocol}://${host}/ws/presence?sessionId=${encodeURIComponent(sessionId)}`;
+    return `${protocol}//${host}/ws/presence?sessionId=${encodeURIComponent(sessionId)}`;
   }, [getSessionId]);
 
   // Connect to WebSocket
