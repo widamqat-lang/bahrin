@@ -206,6 +206,11 @@ export function CustomersAdmin() {
 
   const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
   
+  // Find the customer group for selected order
+  const selectedCustomerGroup = groupedCustomers.find(
+    g => g.orders.some(o => o.id === selectedCustomerId)
+  );
+  
   // Match presence clients with orders by orderId (primary) or customerName (fallback)
   const ordersWithPresence = useMemo(() => {
     return ordersList.map((order) => {
@@ -225,6 +230,68 @@ export function CustomersAdmin() {
         isOnline: presence?.isOnline || false,
         lastSeenAt: presence?.lastSeenAt || null,
       };
+    });
+  }, [ordersList, presenceClients]);
+
+  // Group orders by customer (name + phone) to show unique customers
+  const groupedCustomers = useMemo(() => {
+    const grouped = ordersList.reduce((acc, order) => {
+      const key = `${order.customerName}-${order.phone}`;
+      
+      if (!acc[key]) {
+        acc[key] = {
+          customerName: order.customerName,
+          phone: order.phone,
+          orders: [],
+          orderCount: 0,
+          latestOrder: null,
+          latestOrderId: null,
+          currentPage: null,
+          isOnline: false,
+          lastSeenAt: null,
+        };
+      }
+      
+      acc[key].orders.push(order);
+      acc[key].orderCount++;
+      
+      // Update with the most recent order
+      const orderDate = new Date(order.createdAt);
+      if (!acc[key].latestOrder || orderDate > new Date(acc[key].latestOrder.createdAt)) {
+        acc[key].latestOrder = order;
+        acc[key].latestOrderId = order.id;
+        
+        // Update presence info from the latest order's match
+        let presence = presenceClients.find((p) => p.orderId === order.id);
+        if (!presence) {
+          presence = presenceClients.find(
+            (p) => p.customerName && p.customerName === order.customerName
+          );
+        }
+        if (presence) {
+          acc[key].currentPage = presence.currentPage || null;
+          acc[key].isOnline = presence.isOnline || false;
+          acc[key].lastSeenAt = presence.lastSeenAt || null;
+        }
+      }
+      
+      return acc;
+    }, {} as Record<string, {
+      customerName: string;
+      phone: string;
+      orders: typeof ordersList;
+      orderCount: number;
+      latestOrder: typeof ordersList[0] | null;
+      latestOrderId: number | null;
+      currentPage: string | null;
+      isOnline: boolean;
+      lastSeenAt: string | null;
+    }>);
+    
+    // Sort by latest order date
+    return Object.values(grouped).sort((a, b) => {
+      if (!a.latestOrder || !b.latestOrder) return 0;
+      return new Date(b.latestOrder.createdAt).getTime() - new Date(a.latestOrder.createdAt).getTime();
     });
   }, [ordersList, presenceClients]);
 
@@ -536,7 +603,9 @@ export function CustomersAdmin() {
         <div className="flex items-center justify-between border-b p-4">
           <div>
             <h2 className="font-bold">العملاء</h2>
-            <p className="text-sm text-muted-foreground">{ordersList.length} طلب</p>
+            <p className="text-sm text-muted-foreground">
+              {groupedCustomers.length} عميل ({ordersList.length} طلب)
+            </p>
           </div>
           <button
             onClick={() => void refetch()}
@@ -547,51 +616,60 @@ export function CustomersAdmin() {
           </button>
         </div>
         <div className="overflow-y-auto p-2">
-          {ordersList.length === 0 ? (
+          {groupedCustomers.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               لا توجد طلبات حتى الآن
             </div>
           ) : (
-            ordersWithPresence.map((order) => (
+            groupedCustomers.map((customer) => (
               <button
-                key={order.id}
+                key={customer.latestOrderId}
                 onClick={() => {
-                  setSelectedCustomerId(order.id);
-                  setActiveTab('info');
+                  if (customer.latestOrderId) {
+                    setSelectedCustomerId(customer.latestOrderId);
+                    setActiveTab('info');
+                  }
                 }}
                 className={`mb-1 flex w-full items-center justify-between rounded-lg p-3 text-right transition-colors ${
-                  selectedCustomerId === order.id
+                  selectedCustomerGroup === customer
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-muted'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    selectedCustomerId === order.id
+                    selectedCustomerGroup === customer
                       ? 'bg-primary-foreground/20'
                       : 'bg-muted'
                   }`}>
                     <User className="h-5 w-5" />
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{order.customerName}</p>
+                    <p className="font-medium flex items-center gap-2">
+                      {customer.customerName}
+                      {customer.orderCount > 1 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary-foreground">
+                          {customer.orderCount} طلبات
+                        </span>
+                      )}
+                    </p>
                     <div className={`flex items-center gap-2 text-xs ${
-                      selectedCustomerId === order.id
+                      selectedCustomerGroup === customer
                         ? 'text-primary-foreground/70'
                         : 'text-muted-foreground'
                     }`}>
-                      {order.isOnline ? (
+                      {customer.isOnline ? (
                         <>
                           <span className="flex items-center gap-1 text-green-500">
                             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                            {getPageDisplayName(order.currentPage || '/')}
+                            {getPageDisplayName(customer.currentPage || '/')}
                           </span>
                         </>
                       ) : (
                         <>
                           <span className="flex items-center gap-1">
                             <WifiOff className="h-3 w-3" />
-                            {order.currentPage ? getPageDisplayName(order.currentPage) : 'غير متصل'}
+                            {customer.currentPage ? getPageDisplayName(customer.currentPage) : 'غير متصل'}
                           </span>
                         </>
                       )}
@@ -599,13 +677,13 @@ export function CustomersAdmin() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {order.isOnline ? (
+                  {customer.isOnline ? (
                     <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
                   ) : (
                     <span className="flex h-2 w-2 rounded-full bg-gray-400"></span>
                   )}
                   <ChevronRight className={`h-4 w-4 ${
-                    selectedCustomerId === order.id ? 'rotate-180' : ''
+                    selectedCustomerGroup === customer ? 'rotate-180' : ''
                   }`} />
                 </div>
               </button>
