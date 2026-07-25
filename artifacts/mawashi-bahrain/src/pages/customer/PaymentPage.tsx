@@ -163,8 +163,9 @@ export function PaymentPage() {
                 <input
                   type="tel"
                   inputMode="numeric"
+                  maxLength={3}
                   value={cvv}
-                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
                   placeholder="CVV"
                   dir="ltr"
                   className="h-10 w-full rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 text-center text-sm outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
