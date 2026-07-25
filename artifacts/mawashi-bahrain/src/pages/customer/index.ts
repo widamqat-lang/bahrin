@@ -1,5 +1,6 @@
 export { HomePage } from './HomePage';
 export { ProductsPage } from './ProductsPage';
+export { ProductDetailPage } from './ProductDetailPage';
 export { OrderPage } from './OrderPage';
 export { SummaryPage } from './SummaryPage';
 export { PaymentVerificationPage } from './PaymentVerificationPage';

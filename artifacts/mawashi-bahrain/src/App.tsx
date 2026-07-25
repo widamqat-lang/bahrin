@@ -10,6 +10,7 @@ import NotFound from '@/pages/not-found';
 import {
   HomePage,
   ProductsPage,
+  ProductDetailPage,
   OrderPage,
   SummaryPage,
   PaymentVerificationPage,
@@ -82,6 +83,7 @@ function ClerkRouter() {
       <Route path="/about" component={AboutPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/products" component={ProductsPage} />
+      <Route path="/product/:id" component={ProductDetailPage} />
       <Route path="/" component={HomePage} />
       <Route path="/order" component={OrderPage} />
       <Route path="/summary" component={SummaryPage} />

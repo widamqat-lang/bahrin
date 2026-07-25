@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useListProducts } from '@workspace/api-client-react';
-import { ArrowLeft, CalendarDays, Minus, Plus } from 'lucide-react';
+import { ArrowRight, CalendarDays, Minus, Plus } from 'lucide-react';
 import { Shell, LoadingBlock, ErrorBlock, EmptyProducts } from '../shared';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -23,12 +23,13 @@ export function OrderPage() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const productId = Number(params.get('product') || '0');
+  const initialQuantity = Number(params.get('quantity') || '1');
   
   const { data: products, isLoading, isError, refetch } = useListProducts();
   const productList = Array.isArray(products) ? products : [];
   const product = productList.find((p) => p.id === productId) || productList.find((p) => p.active);
 
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(initialQuantity);
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -60,6 +61,9 @@ export function OrderPage() {
     sessionStorage.setItem('mawashi-customer-name', customerName);
     setLocation('/summary');
   };
+
+  const decreaseQty = () => setQuantity(q => Math.max(1, q - 1));
+  const increaseQty = () => setQuantity(q => Math.min(product.maxQuantity, q + 1));
 
   return (
     <Shell>
@@ -104,6 +108,37 @@ export function OrderPage() {
               </div>
             </div>
 
+            {/* Quantity Selector */}
+            <div className="mt-6">
+              <Label className="text-xs font-bold">اختر العدد:</Label>
+              <div className="mt-3 flex items-center gap-4">
+                <div className="flex items-center gap-3 rounded-2xl border border-input bg-background px-4 py-2">
+                  <button 
+                    type="button" 
+                    onClick={decreaseQty} 
+                    data-testid="button-decrease-quantity" 
+                    className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                  >
+                    <Minus size={18} />
+                  </button>
+                  <span className="w-12 text-center text-xl font-bold" dir="ltr" data-testid="text-order-quantity">
+                    {quantity}
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={increaseQty} 
+                    data-testid="button-increase-quantity" 
+                    className="grid size-10 place-items-center rounded-xl bg-accent text-secondary transition hover:bg-accent/80"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  من {product.maxQuantity} متاح
+                </span>
+              </div>
+            </div>
+
             <div className="mt-7 grid gap-5 sm:grid-cols-2">
               <div>
                 <Label htmlFor="customer-name" className="text-xs font-bold">الاسم الكريم</Label>
@@ -139,7 +174,7 @@ export function OrderPage() {
                   className="mt-2 min-h-[86px] resize-none rounded-xl bg-card" 
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <Label htmlFor="pickup-date" className="text-xs font-bold">موعد التوصيل المفضل</Label>
                 <div className="relative mt-2">
                   <CalendarDays size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary" />
@@ -154,30 +189,6 @@ export function OrderPage() {
                   />
                 </div>
               </div>
-              <div>
-                <Label className="text-xs font-bold">الكمية</Label>
-                <div className="mt-2 flex h-12 items-center justify-between rounded-xl border border-input bg-card px-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))} 
-                    data-testid="button-decrease-quantity" 
-                    className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground"
-                  >
-                    <Minus size={15} />
-                  </button>
-                  <span className="font-mono-bahrain text-sm" dir="ltr" data-testid="text-order-quantity">
-                    {quantity}
-                  </span>
-                  <button 
-                    type="button" 
-                    onClick={() => setQuantity(Math.min(product.maxQuantity, quantity + 1))} 
-                    data-testid="button-increase-quantity" 
-                    className="grid size-8 place-items-center rounded-lg bg-accent text-secondary"
-                  >
-                    <Plus size={15} />
-                  </button>
-                </div>
-              </div>
             </div>
 
             {error && (
@@ -189,9 +200,9 @@ export function OrderPage() {
             <Button 
               onClick={goNext} 
               data-testid="button-continue-order" 
-              className="mt-8 h-12 rounded-xl text-xs font-bold"
+              className="mt-8 h-14 rounded-2xl text-base font-bold"
             >
-              متابعة الطلب <ArrowLeft size={16} />
+              متابعة الطلب <ArrowRight size={20} />
             </Button>
           </div>
         </div>
