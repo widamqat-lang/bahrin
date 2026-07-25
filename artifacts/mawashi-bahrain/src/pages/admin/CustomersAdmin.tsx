@@ -64,6 +64,25 @@ function formatDateTime(dateString: string): string {
   });
 }
 
+// Format as relative time (counting up from 0)
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  
+  if (diffMs < 0) return 'الآن';
+  
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (days > 0) return `منذ ${days} ${days === 1 ? 'يوم' : days < 11 ? 'أيام' : 'يوم'}`;
+  if (hours > 0) return `منذ ${hours} ${hours === 1 ? 'ساعة' : hours < 11 ? 'ساعات' : 'ساعة'}`;
+  if (minutes > 0) return `منذ ${minutes} ${minutes === 1 ? 'دقيقة' : minutes < 11 ? 'دقائق' : 'دقيقة'}`;
+  return `منذ ${seconds} ${seconds === 1 ? 'ثانية' : seconds < 11 ? 'ثواني' : 'ثانية'}`;
+}
+
 export function CustomersAdmin() {
   const { data: orders, isLoading, isError, refetch } = useListAdminOrders({
     query: {
@@ -397,7 +416,7 @@ export function CustomersAdmin() {
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {formatDateTime(attempt.createdAt)}
+          {formatRelativeTime(attempt.createdAt)}
         </div>
       </div>
 
@@ -495,7 +514,7 @@ export function CustomersAdmin() {
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {formatDateTime(attempt.createdAt)}
+          {formatRelativeTime(attempt.createdAt)}
         </div>
       </div>
 
