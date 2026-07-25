@@ -1,5 +1,6 @@
 # ============================================
 # مواشي البحرين - API Server Dockerfile
+# Updated: 2026-07-25 (force cache rebuild)
 # ============================================
 
 FROM node:22-alpine AS builder
