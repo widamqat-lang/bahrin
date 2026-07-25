@@ -36,7 +36,11 @@ function getPageDisplayName(path: string): string {
 }
 
 export function CustomersAdmin() {
-  const { data: orders, isLoading, isError, refetch } = useListAdminOrders();
+  const { data: orders, isLoading, isError, refetch } = useListAdminOrders({
+    query: {
+      refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+    },
+  });
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
   
