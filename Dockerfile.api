@@ -23,6 +23,9 @@ RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @workspace/api-server run build
 
 # Build the frontend (this creates static files)
+# Set PORT for vite.config.ts validation
+ENV PORT=8080
+ENV BASE_PATH=/
 RUN pnpm --filter @workspace/mawashi-bahrain run build
 
 # Production stage
