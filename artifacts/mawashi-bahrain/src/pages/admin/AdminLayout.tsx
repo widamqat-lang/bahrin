@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useUser, useClerk } from '@clerk/react';
 import {
   BarChart3,
   ChevronLeft,
+  ChevronDown,
   ExternalLink,
   FileText,
   ClipboardList,
@@ -13,6 +14,11 @@ import {
   UsersRound,
   X,
   Users,
+  Home,
+  ShoppingBag,
+  Info,
+  Phone,
+  ListOrdered,
 } from 'lucide-react';
 import { BrandMark } from '../shared';
 
@@ -30,6 +36,8 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const [mobileNav, setMobileNav] = useState(false);
+  const [storeMenuOpen, setStoreMenuOpen] = useState(false);
+  const storeMenuRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
   const { signOut } = useClerk();
 
@@ -41,6 +49,24 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
     { id: 'orders' as const, label: 'الطلبات', icon: ClipboardList },
     { id: 'presence' as const, label: 'الحضور المباشر', icon: UsersRound },
   ];
+
+  const storeLinks = [
+    { href: '/', label: 'الصفحة الرئيسية', icon: Home },
+    { href: '/products', label: 'المنتجات', icon: ShoppingBag },
+    { href: '/about', label: 'من نحن', icon: Info },
+    { href: '/contact', label: 'اتصل بنا', icon: Phone },
+  ];
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (storeMenuRef.current && !storeMenuRef.current.contains(event.target as Node)) {
+        setStoreMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const tabTitles: Record<AdminTab, string> = {
     customers: 'العملاء',
@@ -136,14 +162,46 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               <h1 className="mt-1 text-base font-bold">{tabTitles[tab]}</h1>
             </div>
           </div>
-          <Link 
-            href="/" 
-            target="_blank" 
-            data-testid="link-admin-view-store" 
-            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold"
-          >
-            <ExternalLink size={14} /> المتجر
-          </Link>
+
+          {/* Store Menu Dropdown */}
+          <div className="relative" ref={storeMenuRef}>
+            <button
+              type="button"
+              onClick={() => setStoreMenuOpen(!storeMenuOpen)}
+              data-testid="button-admin-store-menu"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold transition-colors hover:bg-muted"
+            >
+              <ExternalLink size={14} />
+              <span>قائمة</span>
+              <ChevronDown 
+                size={12} 
+                className={`transition-transform ${storeMenuOpen ? 'rotate-180' : ''}`} 
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            {storeMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
+                <div className="p-2 border-b border-border">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">المتجر</p>
+                </div>
+                <nav className="p-1">
+                  {storeLinks.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      target="_blank"
+                      onClick={() => setStoreMenuOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      <Icon size={14} />
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="p-5 md:p-9">{children}</div>
