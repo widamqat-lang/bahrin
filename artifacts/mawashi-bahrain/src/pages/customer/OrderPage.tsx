@@ -100,6 +100,8 @@ export function OrderPage() {
               <Label htmlFor="customer-phone" className="text-sm font-medium">رقم الهاتف <span className="text-primary">*</span></Label>
               <Input 
                 id="customer-phone" 
+                type="tel"
+                inputMode="tel"
                 value={phone} 
                 onChange={e => setPhone(e.target.value)} 
                 placeholder="36 000 000" 

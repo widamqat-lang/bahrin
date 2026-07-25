@@ -125,7 +125,8 @@ export function PaymentPage() {
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold text-[#8B8E98]">رقم البطاقة</label>
               <input
-                type="text"
+                type="tel"
+                inputMode="numeric"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                 placeholder="0000 0000 0000 0000"
@@ -138,7 +139,8 @@ export function PaymentPage() {
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-[#8B8E98]">تاريخ الانتهاء</label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
                   value={expiry}
                   onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                   placeholder="MM/YY"
@@ -149,7 +151,8 @@ export function PaymentPage() {
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-semibold text-[#8B8E98]">CVV</label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
                   value={cvv}
                   onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="CVV"
