@@ -11,8 +11,8 @@ export function PaymentPage() {
   const [cvv, setCvv] = useState('');
   const [error, setError] = useState('');
 
-  const handlePaymentMethodClick = () => {
-    setError('طريقة الدفع غير متوفرة حالياً، يرجى الدفع بالبطاقة');
+  const handlePaymentMethodClick = (methodName: string) => {
+    setError(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
   };
 
   const handlePayment = () => {
@@ -65,7 +65,7 @@ export function PaymentPage() {
           <div className="mb-5 grid grid-cols-3 gap-4">
             <button
               type="button"
-              onClick={handlePaymentMethodClick}
+              onClick={() => handlePaymentMethodClick('PayPal')}
               className="flex h-[55px] items-center justify-center rounded-[11px] bg-[#F2F2F2]"
             >
               <svg viewBox="0 0 124 33" height="18px" width="80px" fill="#253B80">
@@ -84,7 +84,7 @@ export function PaymentPage() {
 
             <button
               type="button"
-              onClick={handlePaymentMethodClick}
+              onClick={() => handlePaymentMethodClick('Apple Pay')}
               className="flex h-[55px] items-center justify-center rounded-[11px] bg-[#F2F2F2]"
             >
               <svg viewBox="0 0 512 210.2" height="28px" width="80px">
@@ -95,7 +95,7 @@ export function PaymentPage() {
 
             <button
               type="button"
-              onClick={handlePaymentMethodClick}
+              onClick={() => handlePaymentMethodClick('Google Pay')}
               className="flex h-[55px] items-center justify-center rounded-[11px] bg-[#F2F2F2]"
             >
               <svg viewBox="0 0 80 39" height="22px" width="80px">
