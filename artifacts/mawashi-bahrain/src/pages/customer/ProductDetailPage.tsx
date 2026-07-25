@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useLocation, Link } from 'wouter';
+import { useState } from 'react';
+import { useLocation, Link, useParams } from 'wouter';
 import { useListProducts } from '@workspace/api-client-react';
-import type { Product } from '@workspace/api-client-react';
 import { ArrowRight, BadgeCheck, Check, Minus, Plus, ShieldCheck, Truck } from 'lucide-react';
 import { Shell, LoadingBlock, ErrorBlock } from '../shared';
 import { Button } from '@/components/ui/button';
@@ -14,14 +13,16 @@ function money(value: number) {
 
 export function ProductDetailPage() {
   const [location, setLocation] = useLocation();
-  const params = new URLSearchParams(window.location.search);
-  const productId = Number(params.get('product') || '0');
+  const params = useParams<{ id: string }>();
+  const searchParams = new URLSearchParams(window.location.search);
+  const productId = Number(params.id || '0');
+  const initialQuantity = Number(searchParams.get('quantity') || '1');
   
   const { data: products, isLoading, isError, refetch } = useListProducts();
   const productList = Array.isArray(products) ? products : [];
   const product = productList.find(p => p.id === productId);
   
-  const [quantity, setQuantity] = useState(() => Number(params.get('quantity') || '1'));
+  const [quantity, setQuantity] = useState(initialQuantity);
 
   if (isLoading) return <Shell><LoadingBlock label="نحمّل تفاصيل المنتج" /></Shell>;
   if (isError) return <Shell><ErrorBlock onRetry={() => void refetch()} /></Shell>;
