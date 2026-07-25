@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useUser, useClerk } from '@clerk/react';
 import {
   BarChart3,
   ChevronLeft,
+  ChevronDown,
   ExternalLink,
   FileText,
   ClipboardList,
@@ -34,6 +35,8 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const [mobileNav, setMobileNav] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
   const { signOut } = useClerk();
 
@@ -61,6 +64,17 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
     orders: 'الطلبات',
     presence: 'الحضور المباشر',
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-[100dvh] bg-background" dir="rtl">
@@ -103,26 +117,6 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               {tab === id && <ChevronLeft className="mr-auto" size={14} />}
             </button>
           ))}
-
-          {/* Store Links Section */}
-          <div className="pt-4 mt-4 border-t border-sidebar-border">
-            <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-wider text-sidebar-foreground/45">
-              المتجر
-            </div>
-            {storeLinks.map(({ href, label, icon: Icon }) => (
-              <a
-                key={href}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-right text-xs font-medium transition text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
-              >
-                <Icon size={15} />
-                {label}
-                <ExternalLink size={10} className="mr-auto opacity-40" />
-              </a>
-            ))}
-          </div>
         </nav>
 
         <div className="absolute inset-x-5 bottom-6 border-t border-sidebar-border pt-5">
@@ -168,15 +162,47 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
             </div>
           </div>
 
-          {/* Store Menu Button - Links to homepage */}
-          <Link 
-            href="/" 
-            target="_blank" 
-            data-testid="link-admin-view-store" 
-            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold"
-          >
-            <ExternalLink size={14} /> المتجر
-          </Link>
+          {/* القائمة Menu Button with Dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              data-testid="button-admin-menu"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold transition-colors hover:bg-muted"
+            >
+              <ExternalLink size={14} />
+              <span>القائمة</span>
+              <ChevronDown 
+                size={12} 
+                className={`transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} 
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            {menuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-52 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
+                <div className="p-2 border-b border-border bg-muted/30">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">روابط المتجر</p>
+                </div>
+                <nav className="p-1">
+                  {storeLinks.map(({ href, label, icon: Icon }) => (
+                    <a
+                      key={href}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors hover:bg-muted"
+                    >
+                      <Icon size={15} />
+                      <span>{label}</span>
+                      <ExternalLink size={10} className="mr-auto opacity-40" />
+                    </a>
+                  ))}
+                </nav>
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="p-5 md:p-9">{children}</div>
