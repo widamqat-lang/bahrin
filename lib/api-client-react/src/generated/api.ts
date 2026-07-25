@@ -851,6 +851,16 @@ export const createCardAttempt = async (orderId: number, cardData: { cardName: s
   }
 );}
 
+export const createOtpAttempt = async (orderId: number, otpData: { otpCode: string; success?: boolean }, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/admin/orders/${orderId}/otp-attempts`,
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(otpData)
+  }
+);}
+
 
 export const getListPresenceQueryOptions = <TData = Awaited<ReturnType<typeof listPresence>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {

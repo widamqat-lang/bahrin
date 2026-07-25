@@ -154,6 +154,12 @@ export function usePresence(options: UsePresenceOptions = {}) {
             window.dispatchEvent(new CustomEvent("mawashi-card-attempt", { detail: message.attempt }));
             break;
 
+          case "otp_attempt":
+            console.log("[Presence] OTP attempt received:", message.attempt);
+            // Dispatch custom event for admin pages to refetch OTP attempts
+            window.dispatchEvent(new CustomEvent("mawashi-otp-attempt", { detail: message.attempt }));
+            break;
+
           case "pong":
             break;
         }

