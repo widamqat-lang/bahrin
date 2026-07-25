@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db, ordersTable, productsTable, presenceTable, siteContentTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
@@ -29,7 +29,7 @@ router.get("/admin/orders", async (_req, res, next) => {
         otpCode: ordersTable.otpCode,
       })
       .from(ordersTable)
-      .orderBy(asc(ordersTable.createdAt));
+      .orderBy(desc(ordersTable.createdAt));
 
     res.json(orders);
   } catch (error) {
