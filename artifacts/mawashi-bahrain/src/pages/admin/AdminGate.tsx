@@ -1,5 +1,11 @@
 import { useUser } from '@clerk/react';
 
+// قائمة الإيميلات المسموح لها بالدخول للوحة التحكم
+// أضف إيميلك هنا
+const ADMIN_EMAILS = [
+  'msola8228@gmail.com', // مثال - مدير المتجر
+];
+
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
 
@@ -20,10 +26,11 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Check if user has admin role
-  const hasAdminRole = user?.publicMetadata?.role === 'admin';
+  // Check if user's email is in the allowed list
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+  const isAdmin = userEmail && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
 
-  if (!hasAdminRole) {
+  if (!isAdmin) {
     // Redirect non-admin users to the main store
     window.location.href = '/?error=unauthorized';
     return (
