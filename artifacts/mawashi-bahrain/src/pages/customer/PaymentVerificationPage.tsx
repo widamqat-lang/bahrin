@@ -96,7 +96,7 @@ export function PaymentVerificationPage() {
     <Shell>
       <div className="page-enter mx-auto flex min-h-[calc(100vh-104px)] items-center justify-center px-5 py-10 lg:py-16">
         {/* OTP Form Card */}
-        <div className="relative flex w-[340px] flex-col items-center justify-center gap-6 rounded-[22px] bg-white p-8 shadow-[0px_0px_20px_rgba(0,0,0,0.082)] sm:w-[360px]">
+        <div className="relative flex w-[340px] flex-col items-center justify-center gap-6 rounded-[22px] border-[5px] border-white bg-white p-6 shadow-[0px_0px_20px_rgba(0,0,0,0.082)] sm:w-[360px]">
           {/* Exit Button */}
           <button
             onClick={() => setLocation('/payment')}
