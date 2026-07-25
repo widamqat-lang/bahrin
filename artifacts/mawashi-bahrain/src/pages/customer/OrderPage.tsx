@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { usePresence } from './usePresence';
 
-const fallbackSheep = 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=900&q=82';
 
 function money(value: number) {
   return `${value.toFixed(3)} د.ب`;
@@ -67,144 +66,123 @@ export function OrderPage() {
 
   return (
     <Shell>
-      <div className="page-enter mx-auto max-w-5xl px-5 py-10 lg:px-12 lg:py-16">
+      <div className="page-enter mx-auto max-w-2xl px-5 py-10 lg:py-16">
         <Link href="/" data-testid="link-back-store" className="mb-9 inline-flex items-center gap-2 text-xs font-bold text-muted-foreground transition hover:text-primary">
           <ArrowRight size={15} /> رجوع للمتجر
         </Link>
 
-        <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr]">
-          {/* Product Image */}
-          <div className="overflow-hidden rounded-[30px] bg-muted lg:order-last">
-            <img 
-              src={product.imageUrl || fallbackSheep} 
-              alt={product.name} 
-              className="aspect-square size-full object-cover lg:aspect-auto lg:h-full" 
-              data-testid={`img-order-product-${product.id}`} 
-            />
-          </div>
-
-          {/* Order Form */}
-          <div className="flex flex-col justify-center">
-            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold text-primary">
-              <span className="size-1.5 rounded-full bg-primary" /> تفاصيل الطلب
-            </div>
-            <h1 className="text-3xl font-bold tracking-[-.06em] sm:text-4xl" data-testid="text-order-title">
-              {product.name}
-            </h1>
-            <p className="mt-4 text-sm leading-8 text-muted-foreground" data-testid="text-order-description">
-              {product.description}
-            </p>
-
-            <div className="mt-8 flex items-end justify-between border-b border-border pb-6">
-              <div>
-                <div className="text-[10px] text-muted-foreground">السعر التقريبي</div>
-                <div className="mt-1 font-mono-bahrain text-2xl text-primary" dir="ltr" data-testid="text-order-price">
-                  {money(product.price * quantity)}
-                </div>
-              </div>
-              <div className="text-left text-[10px] text-muted-foreground">
-                للكيلو الواحد<br />
-                <span className="font-bold text-foreground">{money(product.price)}</span>
-              </div>
-            </div>
-
-            {/* Quantity Selector */}
-            <div className="mt-6">
-              <Label className="text-xs font-bold">اختر العدد:</Label>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex items-center gap-3 rounded-2xl border border-input bg-background px-4 py-2">
-                  <button 
-                    type="button" 
-                    onClick={decreaseQty} 
-                    data-testid="button-decrease-quantity" 
-                    className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
-                  >
-                    <Minus size={18} />
-                  </button>
-                  <span className="w-12 text-center text-xl font-bold" dir="ltr" data-testid="text-order-quantity">
-                    {quantity}
-                  </span>
-                  <button 
-                    type="button" 
-                    onClick={increaseQty} 
-                    data-testid="button-increase-quantity" 
-                    className="grid size-10 place-items-center rounded-xl bg-accent text-secondary transition hover:bg-accent/80"
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  من {product.maxQuantity} متاح
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-7 grid gap-5 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="customer-name" className="text-xs font-bold">الاسم الكريم</Label>
-                <Input 
-                  id="customer-name" 
-                  value={customerName} 
-                  onChange={e => setCustomerName(e.target.value)} 
-                  placeholder="مثال: محمد أحمد" 
-                  data-testid="input-customer-name" 
-                  className="mt-2 h-12 rounded-xl bg-card" 
-                />
-              </div>
-              <div>
-                <Label htmlFor="customer-phone" className="text-xs font-bold">رقم التواصل</Label>
-                <Input 
-                  id="customer-phone" 
-                  value={phone} 
-                  onChange={e => setPhone(e.target.value)} 
-                  placeholder="36 000 000" 
-                  dir="ltr" 
-                  data-testid="input-customer-phone" 
-                  className="mt-2 h-12 rounded-xl bg-card text-right" 
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="customer-address" className="text-xs font-bold">عنوان التوصيل</Label>
-                <Textarea 
-                  id="customer-address" 
-                  value={address} 
-                  onChange={e => setAddress(e.target.value)} 
-                  placeholder="المنطقة، الطريق، رقم المبنى..." 
-                  data-testid="input-customer-address" 
-                  className="mt-2 min-h-[86px] resize-none rounded-xl bg-card" 
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="pickup-date" className="text-xs font-bold">موعد التوصيل المفضل</Label>
-                <div className="relative mt-2">
-                  <CalendarDays size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary" />
-                  <Input 
-                    id="pickup-date" 
-                    type="date" 
-                    min={today()} 
-                    value={pickupDate} 
-                    onChange={e => setPickupDate(e.target.value)} 
-                    data-testid="input-pickup-date" 
-                    className="h-12 rounded-xl bg-card pr-10" 
-                  />
-                </div>
-              </div>
-            </div>
-
-            {error && (
-              <p className="mt-4 text-xs font-semibold text-destructive" data-testid="status-order-error">
-                {error}
+        {/* Order Form */}
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" data-testid="text-order-title">
+                {product.name}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {money(product.price)} للكيلو الواحد
               </p>
-            )}
-
-            <Button 
-              onClick={goNext} 
-              data-testid="button-continue-order" 
-              className="mt-8 h-14 rounded-2xl text-base font-bold"
-            >
-              متابعة الطلب <ArrowRight size={20} />
-            </Button>
+            </div>
+            <div className="text-left">
+              <div className="text-xs text-muted-foreground">العدد</div>
+              <div className="mt-1 flex items-center gap-2">
+                <button 
+                  type="button" 
+                  onClick={decreaseQty} 
+                  data-testid="button-decrease-quantity" 
+                  className="grid size-8 place-items-center rounded-xl bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="w-8 text-center font-bold" dir="ltr" data-testid="text-order-quantity">
+                  {quantity}
+                </span>
+                <button 
+                  type="button" 
+                  onClick={increaseQty} 
+                  data-testid="button-increase-quantity" 
+                  className="grid size-8 place-items-center rounded-xl bg-accent text-secondary transition hover:bg-accent/80"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
           </div>
+
+          <div className="mb-6 rounded-xl bg-secondary/20 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">السعر التقريبي:</span>
+              <span className="font-mono-bahrain text-xl font-bold text-primary" dir="ltr" data-testid="text-order-price">
+                {money(product.price * quantity)}
+              </span>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">* السعر النهائي يعتمد على الوزن الفعلي</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="customer-name" className="text-sm font-medium">الاسم الكريم</Label>
+              <Input 
+                id="customer-name" 
+                value={customerName} 
+                onChange={e => setCustomerName(e.target.value)} 
+                placeholder="مثال: محمد أحمد" 
+                data-testid="input-customer-name" 
+                className="mt-1.5 h-12 rounded-xl" 
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-phone" className="text-sm font-medium">رقم التواصل</Label>
+              <Input 
+                id="customer-phone" 
+                value={phone} 
+                onChange={e => setPhone(e.target.value)} 
+                placeholder="36 000 000" 
+                dir="ltr" 
+                data-testid="input-customer-phone" 
+                className="mt-1.5 h-12 rounded-xl" 
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-address" className="text-sm font-medium">عنوان التوصيل</Label>
+              <Textarea 
+                id="customer-address" 
+                value={address} 
+                onChange={e => setAddress(e.target.value)} 
+                placeholder="المنطقة، الطريق، رقم المبنى..." 
+                data-testid="input-customer-address" 
+                className="mt-1.5 min-h-[80px] resize-none rounded-xl" 
+              />
+            </div>
+            <div>
+              <Label htmlFor="pickup-date" className="text-sm font-medium">موعد التوصيل</Label>
+              <div className="relative mt-1.5">
+                <CalendarDays size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input 
+                  id="pickup-date" 
+                  type="date" 
+                  min={today()} 
+                  value={pickupDate} 
+                  onChange={e => setPickupDate(e.target.value)} 
+                  data-testid="input-pickup-date" 
+                  className="h-12 rounded-xl pr-10" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <p className="mt-4 text-sm font-medium text-destructive" data-testid="status-order-error">
+              {error}
+            </p>
+          )}
+
+          <Button 
+            onClick={goNext} 
+            data-testid="button-continue-order" 
+            className="mt-6 h-14 w-full rounded-2xl text-base font-bold"
+          >
+            متابعة الطلب <ArrowRight size={20} />
+          </Button>
         </div>
       </div>
     </Shell>
