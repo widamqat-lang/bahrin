@@ -3,18 +3,11 @@
 # ============================================
 
 [build]
-  builder = "NIXPACKS"
-
-[build.nixpacks]
-  # Install only the api-server dependencies
-  installCommand = "pnpm install --filter @workspace/api-server --frozen-lockfile"
-  buildCommand = "pnpm --filter @workspace/api-server run build"
+  builder = "DOCKERFILE"
+  dockerfilePath = "Dockerfile"
 
 [deploy]
   numReplicas = 1
   restartPolicyType = "ON_FAILURE"
   restartPolicyMaxRetries = 10
-
-[start]
-  # Start the API server directly
-  cmd = "node ./artifacts/api-server/dist/index.mjs"
+  healthCheckPath = "/api/healthz"
