@@ -24,7 +24,7 @@ export function HomePage() {
 
   usePresence('home', 'يتصفح المتجر');
 
-  if (isLoading) return <Shell><LoadingBlock label="نحمّل لكم أحدث المنتجات" /></Shell>;
+  if (isLoading) return <Shell><LoadingBlock label="نحمّل لكم افضل المنتجات" /></Shell>;
   if (isError) return <Shell><ErrorBlock onRetry={() => void refetch()} /></Shell>;
 
   return (
@@ -34,7 +34,7 @@ export function HomePage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold tracking-[-.04em]">المنتجات المتاحة</h2>
-            <p className="mt-1 text-xs text-muted-foreground">اختاروا من أفضل المواشي الطازجة</p>
+            <p className="mt-1 text-xs text-muted-foreground">اختاروا من أفضل المواشي المتاحة</p>
           </div>
           <div className="relative">
             <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
