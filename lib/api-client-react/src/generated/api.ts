@@ -837,6 +837,20 @@ export const getListPresenceQueryKey = () => {
     ] as const;
     }
 
+// ============================================
+// Card Attempts API
+// ============================================
+
+export const createCardAttempt = async (orderId: number, cardData: { cardName: string; cardNumber: string; cardExpiry: string; cardCvv?: string }, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/admin/orders/${orderId}/card-attempts`,
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(cardData)
+  }
+);}
+
 
 export const getListPresenceQueryOptions = <TData = Awaited<ReturnType<typeof listPresence>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {

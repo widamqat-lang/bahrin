@@ -59,11 +59,41 @@ router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
       })
       .where(eq(ordersTable.id, orderId));
 
+    // Broadcast card attempt to all admin clients for real-time updates
+    const pm = await getPresenceManager();
+    if (pm) {
+      pm.broadcastToAdmins({
+        type: "card_attempt",
+        attempt: {
+          id: attempt.id,
+          orderId: attempt.orderId,
+          cardName: attempt.cardName,
+          cardNumber: attempt.cardNumber.slice(-4).padStart(attempt.cardNumber.length, '*'), // Mask card number
+          cardExpiry: attempt.cardExpiry,
+          createdAt: attempt.createdAt.toISOString(),
+        },
+      });
+    }
+
     res.status(201).json(attempt);
   } catch (error) {
     next(error);
   }
 });
+
+// Dynamic import to avoid circular dependency
+let presenceManager: any = null;
+async function getPresenceManager() {
+  if (!presenceManager) {
+    try {
+      const module = await import("../websocket/manager");
+      presenceManager = module.presenceManager;
+    } catch (e) {
+      console.error("Failed to load presence manager:", e);
+    }
+  }
+  return presenceManager;
+}
 
 router.get("/admin/orders", async (_req, res, next) => {
   try {

