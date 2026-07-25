@@ -60519,25 +60519,30 @@ if (Number.isNaN(port) || port <= 0) {
 }
 var server = createServer(app_default);
 var wss = new import_websocket_server.default({ server, path: "/ws/presence" });
+var connectedClients = 0;
 wss.on("connection", (ws, req) => {
+  connectedClients++;
   const url2 = new URL(req.url || "", `http://${req.headers.host}`);
   const sessionId = url2.searchParams.get("sessionId") || `anon-${Date.now()}`;
-  logger.info({ sessionId }, "WebSocket client connected");
+  logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client connected");
   presenceManager.register(sessionId, ws);
+  const initialClients = presenceManager.getClients().map((c) => ({
+    sessionId: c.sessionId,
+    currentPage: c.currentPage,
+    customerName: c.customerName,
+    orderId: c.orderId,
+    lastSeenAt: c.lastSeenAt.toISOString(),
+    isOnline: true
+  }));
   ws.send(JSON.stringify({
     type: "connected",
     sessionId,
-    clients: presenceManager.getClients().map((c) => ({
-      sessionId: c.sessionId,
-      currentPage: c.currentPage,
-      customerName: c.customerName,
-      lastSeenAt: c.lastSeenAt.toISOString(),
-      isOnline: true
-    }))
+    clients: initialClients
   }));
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
+      logger.info({ sessionId, messageType: message.type }, "WebSocket message received");
       switch (message.type) {
         case "presence_update":
           presenceManager.updatePresence(sessionId, {
@@ -60545,6 +60550,16 @@ wss.on("connection", (ws, req) => {
             customerName: message.customerName,
             orderId: message.orderId ? Number(message.orderId) : null
           });
+          const allClients = presenceManager.getClients();
+          logger.info({
+            sessionId,
+            clientsCount: allClients.length,
+            updatedData: {
+              page: message.page,
+              customerName: message.customerName,
+              orderId: message.orderId
+            }
+          }, "Broadcasting presence update");
           presenceManager.broadcastPresenceUpdate();
           break;
         case "ping":
@@ -60556,17 +60571,25 @@ wss.on("connection", (ws, req) => {
     }
   });
   ws.on("close", () => {
-    logger.info({ sessionId }, "WebSocket client disconnected");
+    connectedClients--;
+    logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client disconnected");
+    const clientData = presenceManager.getClient(sessionId);
     presenceManager.unregister(sessionId);
     presenceManager.broadcastPresenceUpdate();
+    logger.info({
+      sessionId,
+      lastData: clientData ? {
+        currentPage: clientData.currentPage,
+        customerName: clientData.customerName,
+        orderId: clientData.orderId
+      } : null
+    }, "Client unregistered");
   });
   ws.on("error", (error40) => {
+    connectedClients--;
     logger.error({ error: error40, sessionId }, "WebSocket error");
     presenceManager.unregister(sessionId);
   });
-});
-presenceManager.onUpdate(() => {
-  presenceManager.broadcastPresenceUpdate();
 });
 server.listen(port, (err) => {
   if (err) {

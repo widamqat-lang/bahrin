@@ -20,27 +20,13 @@ interface UsePresenceOptions {
   autoConnect?: boolean;
 }
 
-// Global state to share presence data across components
-let globalPresenceClients: PresenceClient[] = [];
-let globalPresenceListeners: Set<(clients: PresenceClient[]) => void> = new Set();
-
-function notifyListeners() {
-  globalPresenceListeners.forEach((listener) => {
-    try {
-      listener(globalPresenceClients);
-    } catch (e) {
-      console.error("[Presence] Listener error:", e);
-    }
-  });
-}
-
 export function usePresence(options: UsePresenceOptions = {}) {
   const { onPresenceUpdate, autoConnect = true } = options;
   const { user, isLoaded } = useUser();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [presenceClients, setPresenceClients] = useState<PresenceClient[]>(globalPresenceClients);
+  const [presenceClients, setPresenceClients] = useState<PresenceClient[]>([]);
 
   // Get session ID (use Clerk user ID if available, otherwise generate one)
   const getSessionId = useCallback(() => {
@@ -101,7 +87,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
 
     const wsUrl = getWsUrl();
     console.log("[Presence] Connecting to:", wsUrl);
-    
+
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -111,6 +97,8 @@ export function usePresence(options: UsePresenceOptions = {}) {
       // Send initial presence with user and order info
       const customerName = getCustomerName();
       const orderId = getOrderId();
+      
+      console.log("[Presence] Sending initial presence:", { page: window.location.pathname, customerName, orderId });
       
       sendPresenceUpdate({
         page: window.location.pathname,
@@ -122,19 +110,27 @@ export function usePresence(options: UsePresenceOptions = {}) {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log("[Presence] Message received:", message.type, message);
 
         switch (message.type) {
           case "connected":
           case "presence_update":
             const clients = message.clients || [];
+            console.log("[Presence] Updating state with clients:", clients.length);
+            console.log("[Presence] Client details:", clients.map(c => ({
+              sessionId: c.sessionId,
+              currentPage: c.currentPage,
+              customerName: c.customerName,
+              orderId: c.orderId,
+              isOnline: c.isOnline,
+            })));
+            
             setPresenceClients(clients);
-            globalPresenceClients = clients;
-            notifyListeners();
             onPresenceUpdate?.(clients);
             break;
 
           case "pong":
-            // Heartbeat response, ignore
+            console.log("[Presence] Pong received");
             break;
         }
       } catch (error) {
@@ -145,6 +141,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
     ws.onclose = () => {
       console.log("[Presence] Disconnected from WebSocket");
       setIsConnected(false);
+      setPresenceClients([]); // Clear on disconnect
       wsRef.current = null;
 
       // Attempt to reconnect after 3 seconds
@@ -182,12 +179,15 @@ export function usePresence(options: UsePresenceOptions = {}) {
   const sendPresenceUpdate = useCallback(
     (data: { page?: string; customerName?: string; orderId?: number | null }) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log("[Presence] Sending presence update:", data);
         wsRef.current.send(
           JSON.stringify({
             type: "presence_update",
             ...data,
           })
         );
+      } else {
+        console.log("[Presence] Cannot send - WebSocket not connected");
       }
     },
     []
@@ -226,6 +226,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
 
     // Update page on route change
     const handleRouteChange = () => {
+      console.log("[Presence] Route changed to:", window.location.pathname);
       updatePage(window.location.pathname);
     };
 
@@ -234,6 +235,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
 
     // For SPA navigation, we need to use a custom event
     const handleNavigate = () => {
+      console.log("[Presence] Navigation event to:", window.location.pathname);
       updatePage(window.location.pathname);
     };
     window.addEventListener("mawashi-navigate", handleNavigate);
@@ -263,6 +265,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
     if (isConnected) {
       const orderId = getOrderId();
       if (orderId) {
+        console.log("[Presence] Order ID available, updating:", orderId);
         updateOrderId(orderId);
       }
     }

@@ -24,34 +24,43 @@ const server = createServer(app);
 // Create WebSocket server
 const wss = new WebSocketServer({ server, path: "/ws/presence" });
 
+// Track connected clients count
+let connectedClients = 0;
+
 wss.on("connection", (ws: WebSocket, req) => {
+  connectedClients++;
+  
   // Extract session ID from query string
   const url = new URL(req.url || "", `http://${req.headers.host}`);
   const sessionId = url.searchParams.get("sessionId") || `anon-${Date.now()}`;
 
-  logger.info({ sessionId }, "WebSocket client connected");
+  logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client connected");
 
   // Register client
   presenceManager.register(sessionId, ws);
 
   // Send initial presence data
+  const initialClients = presenceManager.getClients().map((c) => ({
+    sessionId: c.sessionId,
+    currentPage: c.currentPage,
+    customerName: c.customerName,
+    orderId: c.orderId,
+    lastSeenAt: c.lastSeenAt.toISOString(),
+    isOnline: true,
+  }));
+
   ws.send(JSON.stringify({
     type: "connected",
     sessionId,
-    clients: presenceManager.getClients().map((c) => ({
-      sessionId: c.sessionId,
-      currentPage: c.currentPage,
-      customerName: c.customerName,
-      lastSeenAt: c.lastSeenAt.toISOString(),
-      isOnline: true,
-    })),
+    clients: initialClients,
   }));
 
   // Handle incoming messages
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
-      
+      logger.info({ sessionId, messageType: message.type }, "WebSocket message received");
+
       switch (message.type) {
         case "presence_update":
           presenceManager.updatePresence(sessionId, {
@@ -59,7 +68,19 @@ wss.on("connection", (ws: WebSocket, req) => {
             customerName: message.customerName,
             orderId: message.orderId ? Number(message.orderId) : null,
           });
-          // Broadcast to all clients
+          
+          // Broadcast to all clients immediately
+          const allClients = presenceManager.getClients();
+          logger.info({ 
+            sessionId, 
+            clientsCount: allClients.length,
+            updatedData: { 
+              page: message.page, 
+              customerName: message.customerName,
+              orderId: message.orderId 
+            }
+          }, "Broadcasting presence update");
+          
           presenceManager.broadcastPresenceUpdate();
           break;
 
@@ -74,22 +95,32 @@ wss.on("connection", (ws: WebSocket, req) => {
 
   // Handle disconnect
   ws.on("close", () => {
-    logger.info({ sessionId }, "WebSocket client disconnected");
+    connectedClients--;
+    logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client disconnected");
+    
+    // Keep the client's last data before removing
+    const clientData = presenceManager.getClient(sessionId);
     presenceManager.unregister(sessionId);
+    
     // Broadcast updated presence to remaining clients
     presenceManager.broadcastPresenceUpdate();
+    
+    logger.info({ 
+      sessionId, 
+      lastData: clientData ? {
+        currentPage: clientData.currentPage,
+        customerName: clientData.customerName,
+        orderId: clientData.orderId,
+      } : null
+    }, "Client unregistered");
   });
 
   // Handle errors
   ws.on("error", (error) => {
+    connectedClients--;
     logger.error({ error, sessionId }, "WebSocket error");
     presenceManager.unregister(sessionId);
   });
-});
-
-// Subscribe to presence updates and broadcast
-presenceManager.onUpdate(() => {
-  presenceManager.broadcastPresenceUpdate();
 });
 
 server.listen(port, (err) => {
