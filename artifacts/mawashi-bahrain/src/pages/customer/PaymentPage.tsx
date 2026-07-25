@@ -93,8 +93,10 @@ export function PaymentPage() {
   // All fields valid
   const isFormValid = cardNameValid && cardNumberValid && expiryValid && cvvValid;
 
+  const [paymentMethodError, setPaymentMethodError] = useState('');
+
   const handlePaymentMethodClick = (methodName: string) => {
-    alert(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
+    setPaymentMethodError(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
   };
 
   const handlePayment = () => {
@@ -159,6 +161,13 @@ export function PaymentPage() {
         <div className="mx-auto max-w-md rounded-[26px] bg-white p-5 shadow-[0px_187px_75px_rgba(0,0,0,0.01),0px_105px_63px_rgba(0,0,0,0.05),0px_47px_47px_rgba(0,0,0,0.09),0px_12px_26px_rgba(0,0,0,0.1)]">
           {/* Payment Options */}
           <div className="mb-5 grid grid-cols-3 gap-4">
+            {/* Error Message */}
+            {paymentMethodError && (
+              <div className="col-span-3 mb-2 text-center text-sm text-red-500">
+                {paymentMethodError}
+              </div>
+            )}
+            
             <button
               type="button"
               onClick={() => handlePaymentMethodClick('PayPal')}
