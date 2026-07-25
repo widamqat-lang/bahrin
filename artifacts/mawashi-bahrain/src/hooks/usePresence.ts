@@ -10,6 +10,7 @@ export interface PresenceClient {
   sessionId: string;
   currentPage: string;
   customerName: string;
+  orderId: number | null;
   lastSeenAt: string;
   isOnline: boolean;
 }
@@ -19,25 +20,77 @@ interface UsePresenceOptions {
   autoConnect?: boolean;
 }
 
+// Global state to share presence data across components
+let globalPresenceClients: PresenceClient[] = [];
+let globalPresenceListeners: Set<(clients: PresenceClient[]) => void> = new Set();
+
+function notifyListeners() {
+  globalPresenceListeners.forEach((listener) => {
+    try {
+      listener(globalPresenceClients);
+    } catch (e) {
+      console.error("[Presence] Listener error:", e);
+    }
+  });
+}
+
 export function usePresence(options: UsePresenceOptions = {}) {
   const { onPresenceUpdate, autoConnect = true } = options;
   const { user, isLoaded } = useUser();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [presenceClients, setPresenceClients] = useState<PresenceClient[]>([]);
+  const [presenceClients, setPresenceClients] = useState<PresenceClient[]>(globalPresenceClients);
 
-  // Get session ID from Clerk
+  // Get session ID (use Clerk user ID if available, otherwise generate one)
   const getSessionId = useCallback(() => {
-    return user?.id || `anon-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return user?.id || `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }, [user]);
+
+  // Get order ID from localStorage (set when placing an order)
+  const getOrderId = useCallback(() => {
+    try {
+      const lastOrder = localStorage.getItem("mawashi-last-order");
+      if (lastOrder) {
+        const order = JSON.parse(lastOrder);
+        return order.id || null;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return null;
+  }, []);
+
+  // Get customer name from localStorage or Clerk
+  const getCustomerName = useCallback(() => {
+    try {
+      const lastOrder = localStorage.getItem("mawashi-last-order");
+      if (lastOrder) {
+        const order = JSON.parse(lastOrder);
+        if (order.customerName) return order.customerName;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return user?.fullName || user?.firstName || "";
   }, [user]);
 
   // Get API URL
   const getWsUrl = useCallback(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    let baseUrl = apiUrl;
+    
+    // Remove trailing slash
+    baseUrl = baseUrl.replace(/\/$/, "");
+    
+    // Determine protocol
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.VITE_API_URL?.replace(/^http/, "") || window.location.host;
+    
+    // Extract host from API URL or use current host
+    let host = baseUrl.replace(/^https?:\/\//, "");
+    
     const sessionId = getSessionId();
-    return `${protocol}//${host}/ws/presence?sessionId=${sessionId}`;
+    return `${protocol}://${host}/ws/presence?sessionId=${encodeURIComponent(sessionId)}`;
   }, [getSessionId]);
 
   // Connect to WebSocket
@@ -45,16 +98,22 @@ export function usePresence(options: UsePresenceOptions = {}) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const wsUrl = getWsUrl();
+    console.log("[Presence] Connecting to:", wsUrl);
+    
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log("[Presence] Connected to WebSocket");
       setIsConnected(true);
 
-      // Send initial presence with user info
+      // Send initial presence with user and order info
+      const customerName = getCustomerName();
+      const orderId = getOrderId();
+      
       sendPresenceUpdate({
         page: window.location.pathname,
-        customerName: user?.fullName || user?.firstName || "",
+        customerName,
+        orderId,
       });
     };
 
@@ -65,8 +124,11 @@ export function usePresence(options: UsePresenceOptions = {}) {
         switch (message.type) {
           case "connected":
           case "presence_update":
-            setPresenceClients(message.clients || []);
-            onPresenceUpdate?.(message.clients || []);
+            const clients = message.clients || [];
+            setPresenceClients(clients);
+            globalPresenceClients = clients;
+            notifyListeners();
+            onPresenceUpdate?.(clients);
             break;
 
           case "pong":
@@ -97,7 +159,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
     };
 
     wsRef.current = ws;
-  }, [getWsUrl, user, onPresenceUpdate, autoConnect]);
+  }, [getWsUrl, getCustomerName, getOrderId, onPresenceUpdate, autoConnect]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -116,7 +178,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
 
   // Send presence update
   const sendPresenceUpdate = useCallback(
-    (data: { page?: string; customerName?: string }) => {
+    (data: { page?: string; customerName?: string; orderId?: number | null }) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
@@ -132,9 +194,11 @@ export function usePresence(options: UsePresenceOptions = {}) {
   // Update current page
   const updatePage = useCallback(
     (page: string) => {
-      sendPresenceUpdate({ page });
+      const customerName = getCustomerName();
+      const orderId = getOrderId();
+      sendPresenceUpdate({ page, customerName, orderId });
     },
-    [sendPresenceUpdate]
+    [sendPresenceUpdate, getCustomerName, getOrderId]
   );
 
   // Update customer name
@@ -143,6 +207,15 @@ export function usePresence(options: UsePresenceOptions = {}) {
       sendPresenceUpdate({ customerName: name });
     },
     [sendPresenceUpdate]
+  );
+
+  // Update order ID
+  const updateOrderId = useCallback(
+    (orderId: number | null) => {
+      const customerName = getCustomerName();
+      sendPresenceUpdate({ customerName, orderId });
+    },
+    [sendPresenceUpdate, getCustomerName]
   );
 
   // Track page changes
@@ -183,12 +256,15 @@ export function usePresence(options: UsePresenceOptions = {}) {
     };
   }, [isLoaded, autoConnect, connect, disconnect]);
 
-  // Update name when user changes
+  // Update presence when order is placed
   useEffect(() => {
-    if (user && isConnected) {
-      updateCustomerName(user.fullName || user.firstName || "");
+    if (isConnected) {
+      const orderId = getOrderId();
+      if (orderId) {
+        updateOrderId(orderId);
+      }
     }
-  }, [user, isConnected, updateCustomerName]);
+  }, [isConnected, getOrderId, updateOrderId]);
 
   // Heartbeat to keep connection alive
   useEffect(() => {
@@ -210,6 +286,7 @@ export function usePresence(options: UsePresenceOptions = {}) {
     disconnect,
     updatePage,
     updateCustomerName,
+    updateOrderId,
     sendPresenceUpdate,
   };
 }

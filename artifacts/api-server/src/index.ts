@@ -57,6 +57,7 @@ wss.on("connection", (ws: WebSocket, req) => {
           presenceManager.updatePresence(sessionId, {
             page: message.page,
             customerName: message.customerName,
+            orderId: message.orderId ? Number(message.orderId) : null,
           });
           // Broadcast to all clients
           presenceManager.broadcastPresenceUpdate();

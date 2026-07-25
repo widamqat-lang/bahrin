@@ -60415,12 +60415,17 @@ var PresenceManager = class {
       ws,
       currentPage: "\u063A\u064A\u0631 \u0645\u062A\u0635\u0644",
       customerName: "",
+      orderId: null,
       lastSeenAt: /* @__PURE__ */ new Date()
     });
     this.notifyHandlers();
   }
   // Unregister a client (disconnect)
   unregister(sessionId) {
+    const client = this.clients.get(sessionId);
+    if (client) {
+      client.lastSeenAt = /* @__PURE__ */ new Date();
+    }
     this.clients.delete(sessionId);
     this.notifyHandlers();
   }
@@ -60433,6 +60438,9 @@ var PresenceManager = class {
       }
       if (data.customerName !== void 0) {
         client.customerName = data.customerName;
+      }
+      if (data.orderId !== void 0) {
+        client.orderId = data.orderId;
       }
       client.lastSeenAt = /* @__PURE__ */ new Date();
       this.notifyHandlers();
@@ -60479,6 +60487,7 @@ var PresenceManager = class {
       sessionId: c.sessionId,
       currentPage: c.currentPage,
       customerName: c.customerName,
+      orderId: c.orderId,
       lastSeenAt: c.lastSeenAt.toISOString(),
       isOnline: true
     }));
@@ -60533,7 +60542,8 @@ wss.on("connection", (ws, req) => {
         case "presence_update":
           presenceManager.updatePresence(sessionId, {
             page: message.page,
-            customerName: message.customerName
+            customerName: message.customerName,
+            orderId: message.orderId ? Number(message.orderId) : null
           });
           presenceManager.broadcastPresenceUpdate();
           break;

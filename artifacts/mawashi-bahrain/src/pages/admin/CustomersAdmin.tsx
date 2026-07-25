@@ -63,12 +63,19 @@ export function CustomersAdmin() {
 
   const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
   
-  // Match presence clients with orders by customer name
+  // Match presence clients with orders by orderId (primary) or customerName (fallback)
   const ordersWithPresence = useMemo(() => {
     return ordersList.map((order) => {
-      const presence = presenceClients.find(
-        (p) => p.customerName === order.customerName || p.sessionId === order.id?.toString()
-      );
+      // First try to match by orderId
+      let presence = presenceClients.find((p) => p.orderId === order.id);
+      
+      // Fallback: match by customer name
+      if (!presence) {
+        presence = presenceClients.find(
+          (p) => p.customerName && p.customerName === order.customerName
+        );
+      }
+      
       return {
         ...order,
         currentPage: presence?.currentPage || null,

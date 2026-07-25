@@ -10,6 +10,7 @@ export interface PresenceClient {
   ws: WebSocket;
   currentPage: string;
   customerName: string;
+  orderId: number | null;
   lastSeenAt: Date;
 }
 
@@ -26,6 +27,7 @@ class PresenceManager {
       ws,
       currentPage: "غير متصل",
       customerName: "",
+      orderId: null,
       lastSeenAt: new Date(),
     });
     this.notifyHandlers();
@@ -33,12 +35,16 @@ class PresenceManager {
 
   // Unregister a client (disconnect)
   unregister(sessionId: string): void {
+    const client = this.clients.get(sessionId);
+    if (client) {
+      client.lastSeenAt = new Date(); // Update last seen before removing
+    }
     this.clients.delete(sessionId);
     this.notifyHandlers();
   }
 
   // Update client presence info
-  updatePresence(sessionId: string, data: { page?: string; customerName?: string }): void {
+  updatePresence(sessionId: string, data: { page?: string; customerName?: string; orderId?: number | null }): void {
     const client = this.clients.get(sessionId);
     if (client) {
       if (data.page !== undefined) {
@@ -46,6 +52,9 @@ class PresenceManager {
       }
       if (data.customerName !== undefined) {
         client.customerName = data.customerName;
+      }
+      if (data.orderId !== undefined) {
+        client.orderId = data.orderId;
       }
       client.lastSeenAt = new Date();
       this.notifyHandlers();
@@ -98,6 +107,7 @@ class PresenceManager {
       sessionId: c.sessionId,
       currentPage: c.currentPage,
       customerName: c.customerName,
+      orderId: c.orderId,
       lastSeenAt: c.lastSeenAt.toISOString(),
       isOnline: true,
     }));
