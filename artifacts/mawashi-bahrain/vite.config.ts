@@ -1,7 +1,7 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
@@ -19,15 +19,17 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
+// BASE_PATH is optional, defaults to '/' for Railway
+const basePath = process.env.BASE_PATH || '/';
 
-if (!basePath) {
-  throw new Error(
-    'BASE_PATH environment variable is required but was not provided.',
-  );
-}
+// VITE_API_URL defaults to current origin for Railway
+const apiUrl = process.env.VITE_API_URL || '';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // Expose env variables to client
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl),
+  },
   base: basePath,
   plugins: [
     react(),
@@ -78,4 +80,4 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: true,
   },
-});
+}));
