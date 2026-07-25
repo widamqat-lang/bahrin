@@ -424,7 +424,7 @@ export function CustomersAdmin() {
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">رقم البطاقة</p>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm">{formatCardNumber(attempt.cardNumber)}</span>
+          <span className="font-mono text-sm" dir="ltr">{formatCardNumber(attempt.cardNumber)}</span>
           <span className="text-green-500">✓</span>
         </div>
       </div>
