@@ -8,10 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
-function tomorrow() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
+function today() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function OrderPage() {
@@ -26,7 +24,7 @@ export function OrderPage() {
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [pickupDate, setPickupDate] = useState(tomorrow());
+  const [pickupDate, setPickupDate] = useState(today());
   const [deliveryTime, setDeliveryTime] = useState('');
   const [error, setError] = useState('');
 
@@ -132,7 +130,7 @@ export function OrderPage() {
                   <Input 
                     id="pickup-date" 
                     type="date" 
-                    min={tomorrow()} 
+                    min={today()} 
                     value={pickupDate} 
                     onChange={e => setPickupDate(e.target.value)} 
                     data-testid="input-pickup-date" 
