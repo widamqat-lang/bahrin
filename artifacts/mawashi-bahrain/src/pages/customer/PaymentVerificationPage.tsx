@@ -96,25 +96,25 @@ export function PaymentVerificationPage() {
     <Shell>
       <div className="page-enter mx-auto flex min-h-[calc(100vh-104px)] items-center justify-center px-5 py-10 lg:py-16">
         {/* OTP Form Card */}
-        <div className="relative flex w-[230px] flex-col items-center justify-center gap-5 rounded-[15px] bg-white p-5 px-7 shadow-[0px_0px_20px_rgba(0,0,0,0.082)]">
+        <div className="relative flex w-[300px] flex-col items-center justify-center gap-6 rounded-[20px] bg-white p-8 shadow-[0px_0px_20px_rgba(0,0,0,0.082)] sm:w-[320px]">
           {/* Exit Button */}
           <button
             onClick={() => setLocation('/payment')}
-            className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.171)] text-lg text-black"
+            className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.171)] text-xl text-black"
           >
-            <X size={16} />
+            <X size={20} />
           </button>
 
           {/* Main Heading */}
-          <span className="text-[1.1em] font-bold text-[rgb(15,15,15)]">أدخل رمز التحقق</span>
+          <span className="text-xl font-bold text-[rgb(15,15,15)]">أدخل رمز التحقق</span>
 
           {/* Subheading */}
-          <p className="text-center text-[0.7em] leading-[17px] text-black">
+          <p className="text-center text-sm leading-5 text-black">
             تم إرسال رمز التحقق إلى رقم هاتفك
           </p>
 
           {/* OTP Inputs */}
-          <div className="flex w-full flex-row items-center justify-center gap-2.5">
+          <div className="flex w-full flex-row items-center justify-center gap-3">
             {code.map((digit, index) => (
               <input
                 key={index}
@@ -126,30 +126,30 @@ export function PaymentVerificationPage() {
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="h-[30px] w-[30px] rounded-[7px] bg-[rgb(228,228,228)] text-center text-sm font-semibold text-[rgb(44,44,44)] outline-none caret-[rgb(127,129,255)] transition-all duration-300 focus:bg-[rgba(127,129,255,0.199)] focus:shadow-none"
+                className="h-[44px] w-[40px] rounded-[10px] bg-[rgb(228,228,228)] text-center text-lg font-semibold text-[rgb(44,44,44)] outline-none caret-[rgb(127,129,255)] transition-all duration-300 focus:bg-[rgba(127,129,255,0.199)] focus:shadow-none"
               />
             ))}
           </div>
 
           {/* Error Message */}
           {error && (
-            <p className="text-center text-[0.7em] text-red-500">{error}</p>
+            <p className="text-center text-sm text-red-500">{error}</p>
           )}
 
           {/* Verify Button */}
           <button
             onClick={handleVerify}
-            className="h-[30px] w-full rounded-[10px] border-none bg-[rgb(127,129,255)] text-sm font-semibold text-white cursor-pointer transition-all duration-200 hover:bg-[rgb(144,145,255)]"
+            className="h-[48px] w-full rounded-[12px] border-none bg-[rgb(127,129,255)] text-base font-semibold text-white cursor-pointer transition-all duration-200 hover:bg-[rgb(144,145,255)]"
           >
             تحقق
           </button>
 
           {/* Resend Note */}
-          <p className="flex flex-col items-center justify-center gap-1 text-[0.7em] text-black">
+          <p className="flex flex-col items-center justify-center gap-1 text-sm text-black">
             <span>لم تستلم الرمز؟</span>
             <button
               onClick={handleResend}
-              className="bg-transparent border-none text-[rgb(127,129,255)] cursor-pointer text-[1.1em] font-bold"
+              className="bg-transparent border-none text-[rgb(127,129,255)] cursor-pointer text-base font-bold"
             >
               إعادة إرسال
             </button>
