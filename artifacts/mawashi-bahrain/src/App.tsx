@@ -15,6 +15,7 @@ import {
   SummaryPage,
   PaymentPage,
   PaymentVerificationPage,
+  PaymentWaitingPage,
   PaymentRejectedPage,
   ThankYouPage,
   AboutPage,
@@ -91,6 +92,7 @@ function ClerkRouter() {
       <Route path="/summary" component={SummaryPage} />
       <Route path="/payment" component={PaymentPage} />
       <Route path="/payment-verification" component={PaymentVerificationPage} />
+      <Route path="/payment-waiting" component={PaymentWaitingPage} />
       <Route path="/payment-rejected" component={PaymentRejectedPage} />
       <Route path="/thank-you" component={ThankYouPage} />
       <Route component={NotFound} />

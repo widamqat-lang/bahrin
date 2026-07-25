@@ -5,6 +5,7 @@ export { OrderPage } from './OrderPage';
 export { SummaryPage } from './SummaryPage';
 export { PaymentPage } from './PaymentPage';
 export { PaymentVerificationPage } from './PaymentVerificationPage';
+export { PaymentWaitingPage } from './PaymentWaitingPage';
 export { PaymentRejectedPage } from './PaymentRejectedPage';
 export { ThankYouPage } from './ThankYouPage';
 export { AboutPage } from './AboutPage';
