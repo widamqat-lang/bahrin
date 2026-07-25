@@ -114,7 +114,7 @@ export function PaymentVerificationPage() {
           </p>
 
           {/* OTP Inputs */}
-          <div className="flex w-full flex-row items-center justify-center gap-4">
+          <div className="flex w-full flex-row items-center justify-center gap-2">
             {code.map((digit, index) => (
               <input
                 key={index}
@@ -126,7 +126,7 @@ export function PaymentVerificationPage() {
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="h-[50px] w-[46px] rounded-[12px] bg-[rgb(228,228,228)] text-center text-xl font-semibold text-[rgb(44,44,44)] outline-none caret-[rgb(127,129,255)] transition-all duration-300 focus:bg-[rgba(127,129,255,0.199)] focus:shadow-none"
+                className="h-[48px] w-[38px] rounded-[10px] bg-[rgb(228,228,228)] text-center text-lg font-semibold text-[rgb(44,44,44)] outline-none caret-[rgb(127,129,255)] transition-all duration-300 focus:bg-[rgba(127,129,255,0.199)] focus:shadow-none"
               />
             ))}
           </div>
