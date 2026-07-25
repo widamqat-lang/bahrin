@@ -71,59 +71,60 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
   // Full card
   return (
     <article 
-      className="group flex min-w-0 cursor-pointer flex-col rounded-3xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+      className="flex min-w-0 cursor-pointer flex-col rounded-2xl border border-border bg-card shadow-sm transition hover:border-primary/30 hover:shadow-md"
       onClick={() => setLocation(`/product/${product.id}`)}
       data-testid={`card-product-${product.id}`}
     >
       {/* Product Image */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-muted">
+      <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-muted">
         <img 
           src={product.imageUrl || fallbackSheep} 
           alt={product.name} 
           className="size-full object-cover transition duration-700 group-hover:scale-105" 
         />
-        <span className="absolute right-3 top-3 rounded-full bg-accent px-3 py-1.5 text-[9px] font-bold text-secondary backdrop-blur">طازج اليوم</span>
+        <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-1 text-[8px] font-bold text-secondary">طازج</span>
       </div>
 
-      {/* Product Info */}
-      <div className="mt-4 flex-1">
-        <h3 className="text-sm font-bold" data-testid={`text-product-name-${product.id}`}>{product.name}</h3>
-        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground" data-testid={`text-product-description-${product.id}`}>
-          {product.description}
-        </p>
-      </div>
+      {/* Card Content */}
+      <div className="flex flex-1 flex-col p-3">
+        {/* Product Info */}
+        <div className="flex-1">
+          <h3 className="line-clamp-1 text-sm font-bold" data-testid={`text-product-name-${product.id}`}>{product.name}</h3>
+          <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground" data-testid={`text-product-description-${product.id}`}>
+            {product.description}
+          </p>
+        </div>
 
-      {/* Price */}
-      <div className="mt-4 flex items-center justify-between">
-        <div>
-          <span className="font-mono-bahrain text-lg font-medium text-primary" dir="ltr" data-testid={`text-product-price-${product.id}`}>
+        {/* Price & Quantity */}
+        <div className="mt-3 flex items-center justify-between">
+          <span className="font-mono-bahrain text-sm font-medium text-primary" dir="ltr" data-testid={`text-product-price-${product.id}`}>
             {money(product.price)}
           </span>
-          <span className="mr-1 text-[10px] text-muted-foreground">للكيلو</span>
+          <span className="text-[9px] text-muted-foreground">للكيلو</span>
         </div>
-      </div>
 
-      {/* Quantity & Order */}
-      <div className="mt-4 flex items-center gap-3">
-        <div className="flex items-center gap-2 rounded-xl border border-input bg-background px-2 py-1">
+        {/* Quantity Selector */}
+        <div className="mt-2 flex items-center justify-between rounded-xl border border-input bg-background px-2 py-1">
           <button 
             type="button" 
             onClick={decreaseQty}
-            className="grid size-6 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+            className="grid size-7 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
             <Minus size={12} />
           </button>
-          <span className="w-6 text-center text-sm font-medium" dir="ltr">{quantity}</span>
+          <span className="text-sm font-medium" dir="ltr">{quantity}</span>
           <button 
             type="button" 
             onClick={increaseQty}
-            className="grid size-6 place-items-center rounded-lg bg-accent text-secondary transition hover:bg-accent/80"
+            className="grid size-7 place-items-center rounded-lg bg-accent text-secondary transition hover:bg-accent/80"
           >
             <Plus size={12} />
           </button>
         </div>
+
+        {/* Order Button */}
         <Button 
-          className="flex-1 rounded-xl text-xs font-bold" 
+          className="mt-2 h-9 w-full rounded-xl text-xs font-bold" 
           onClick={handleOrder}
         >
           طلب الآن
