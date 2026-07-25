@@ -3,16 +3,14 @@ import { Link, useLocation } from 'wouter';
 import { useUser, useClerk } from '@clerk/react';
 import {
   BarChart3,
-  ChevronLeft,
   ChevronDown,
+  ChevronLeft,
   ExternalLink,
   FileText,
   ClipboardList,
   LogOut,
-  Menu,
   Package,
   UsersRound,
-  X,
   Users,
   Home,
   ShoppingBag,
@@ -34,13 +32,12 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
-  const [mobileNav, setMobileNav] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
   const { signOut } = useClerk();
 
-  const tabs = [
+  const adminTabs = [
     { id: 'customers' as const, label: 'العملاء', icon: Users },
     { id: 'overview' as const, label: 'نظرة عامة', icon: BarChart3 },
     { id: 'products' as const, label: 'المنتجات', icon: Package },
@@ -78,48 +75,14 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-[100dvh] bg-background" dir="rtl">
-      {/* Sidebar */}
-      <aside className={cn(
-        'fixed inset-y-0 right-0 z-40 w-[260px] border-l border-sidebar-border bg-sidebar px-5 py-7 text-sidebar-foreground transition-transform md:translate-x-0',
-        mobileNav ? 'translate-x-0' : 'translate-x-full'
-      )}>
-        <div className="mb-12 flex items-center justify-between">
+      {/* Sidebar - Only Brand and User Info */}
+      <aside className="fixed inset-y-0 right-0 z-40 w-[260px] border-l border-sidebar-border bg-sidebar px-5 py-7 text-sidebar-foreground">
+        <div className="mb-12">
           <BrandMark compact />
-          <button 
-            type="button" 
-            onClick={() => setMobileNav(false)} 
-            data-testid="button-close-admin-menu" 
-            className="md:hidden"
-          >
-            <X size={18} />
-          </button>
         </div>
 
-        <div className="mb-4 px-3 font-mono-bahrain text-[9px] uppercase tracking-[.16em] text-sidebar-foreground/45" dir="ltr">
-          CONTROL ROOM
-        </div>
-
-        <nav className="space-y-1">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button 
-              key={id}
-              type="button" 
-              onClick={() => { setTab(id); setMobileNav(false); }} 
-              data-testid={`button-admin-tab-${id}`} 
-              className={cn(
-                'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-right text-xs font-semibold transition',
-                tab === id 
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
-                  : 'text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground'
-              )}
-            >
-              <Icon size={17} />{label}
-              {tab === id && <ChevronLeft className="mr-auto" size={14} />}
-            </button>
-          ))}
-        </nav>
-
-        <div className="absolute inset-x-5 bottom-6 border-t border-sidebar-border pt-5">
+        {/* User Section at bottom */}
+        <div className="absolute inset-x-5 bottom-6">
           <div className="mb-4 flex items-center gap-3 px-2">
             <div className="grid size-8 place-items-center rounded-full bg-sidebar-accent text-xs font-bold">
               {(user?.firstName || 'م').slice(0, 1)}
@@ -145,21 +108,11 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
       {/* Main Content */}
       <div className="md:mr-[260px]">
         <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-border bg-background/90 px-5 backdrop-blur-xl md:px-9">
-          <div className="flex items-center gap-4">
-            <button 
-              type="button" 
-              onClick={() => setMobileNav(true)} 
-              data-testid="button-open-admin-menu" 
-              className="grid size-10 place-items-center rounded-xl bg-muted md:hidden"
-            >
-              <Menu size={19} />
-            </button>
-            <div>
-              <div className="font-mono-bahrain text-[9px] uppercase tracking-[.15em] text-muted-foreground" dir="ltr">
-                MAWASHI / ADMIN
-              </div>
-              <h1 className="mt-1 text-base font-bold">{tabTitles[tab]}</h1>
+          <div>
+            <div className="font-mono-bahrain text-[9px] uppercase tracking-[.15em] text-muted-foreground" dir="ltr">
+              MAWASHI / ADMIN
             </div>
+            <h1 className="mt-1 text-base font-bold">{tabTitles[tab]}</h1>
           </div>
 
           {/* القائمة Menu Button with Dropdown */}
@@ -170,21 +123,46 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               data-testid="button-admin-menu"
               className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-bold transition-colors hover:bg-muted"
             >
-              <ExternalLink size={14} />
               <span>القائمة</span>
               <ChevronDown 
-                size={12} 
+                size={14} 
                 className={`transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} 
               />
             </button>
 
             {/* Dropdown Menu */}
             {menuOpen && (
-              <div className="absolute left-0 top-full mt-2 w-52 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
+              <div className="absolute left-0 top-full mt-2 w-64 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
+                {/* Control Room Section */}
                 <div className="p-2 border-b border-border bg-muted/30">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">لوحة التحكم</p>
+                </div>
+                <nav className="p-1 space-y-0.5">
+                  {adminTabs.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => { setTab(id); setMenuOpen(false); }}
+                      data-testid={`button-admin-tab-${id}`}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-right text-xs font-medium transition-colors',
+                        tab === id 
+                          ? 'bg-primary/10 text-primary font-semibold' 
+                          : 'hover:bg-muted text-foreground/80'
+                      )}
+                    >
+                      <Icon size={16} />
+                      <span className="flex-1">{label}</span>
+                      {tab === id && <ChevronLeft size={12} className="opacity-50" />}
+                    </button>
+                  ))}
+                </nav>
+
+                {/* Store Links Section */}
+                <div className="p-2 border-t border-border bg-muted/30">
                   <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">روابط المتجر</p>
                 </div>
-                <nav className="p-1">
+                <nav className="p-1 pb-2 space-y-0.5">
                   {storeLinks.map(({ href, label, icon: Icon }) => (
                     <a
                       key={href}
@@ -192,11 +170,11 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors hover:bg-muted"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors hover:bg-muted text-foreground/80"
                     >
-                      <Icon size={15} />
-                      <span>{label}</span>
-                      <ExternalLink size={10} className="mr-auto opacity-40" />
+                      <Icon size={16} />
+                      <span className="flex-1">{label}</span>
+                      <ExternalLink size={10} className="opacity-40" />
                     </a>
                   ))}
                 </nav>
