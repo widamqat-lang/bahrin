@@ -359,7 +359,21 @@ function AuthPages() {
 }
 
 function AdminGate() {
-  return <Show when="signed-in"><AdminPage /></Show>;
+  const { user, isSignedIn, isLoaded } = useUser();
+  const { signIn } = useClerk();
+
+  // Show nothing while loading
+  if (!isLoaded) {
+    return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  }
+
+  // Redirect to sign-in if not authenticated
+  if (!isSignedIn) {
+    window.location.href = `${basePath}/sign-in?redirect_url=${encodeURIComponent(window.location.pathname)}`;
+    return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  }
+
+  return <AdminPage />;
 }
 
 type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence';

@@ -26,6 +26,8 @@ RUN pnpm --filter @workspace/api-server run build
 # Set PORT for vite.config.ts validation
 ENV PORT=8080
 ENV BASE_PATH=/
+# Set Clerk publishable key for frontend build
+ENV VITE_CLERK_PUBLISHABLE_KEY=pk_test_bmljZS1oYWRkb2NrLTQ3LmNsZXJrLmFjY291bnRzLmRldiQ
 RUN pnpm --filter @workspace/mawashi-bahrain run build
 
 # Production stage
