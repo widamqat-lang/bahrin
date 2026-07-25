@@ -1,23 +1,72 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Shell } from '../shared';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const verify = () => {
-    if (code.trim().length < 4) {
-      setError('يرجى إدخال رمز التحقق');
+  const fullCode = code.join('');
+
+  const handleChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    
+    const newCode = [...code];
+    newCode[index] = value.slice(-1);
+    setCode(newCode);
+    setError('');
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    if (newCode.every(digit => digit !== '')) {
+      if (fullCode === '000000') {
+        setLocation('/payment-rejected');
+      } else {
+        setVerified(true);
+        setTimeout(() => setLocation('/thank-you'), 1000);
+      }
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const newCode = [...code];
+    pastedData.split('').forEach((char, i) => {
+      if (i < 6) newCode[i] = char;
+    });
+    setCode(newCode);
+    
+    const lastFilledIndex = Math.min(pastedData.length, 6) - 1;
+    if (lastFilledIndex >= 0) {
+      inputRefs.current[lastFilledIndex]?.focus();
+    }
+  };
+
+  const handleResend = () => {
+    setCode(['', '', '', '', '', '']);
+    setError('');
+    inputRefs.current[0]?.focus();
+  };
+
+  const handleVerify = () => {
+    if (fullCode.length < 6) {
+      setError('يرجى إدخال رمز التحقق كاملاً');
       return;
     }
-    // For demo: any code except "0000" succeeds
-    if (code === '0000') {
+    if (fullCode === '000000') {
       setLocation('/payment-rejected');
     } else {
       setVerified(true);
@@ -25,11 +74,15 @@ export function PaymentVerificationPage() {
     }
   };
 
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
+
   if (verified) {
     return (
       <Shell>
         <div className="page-enter mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-5 py-10 text-center">
-          <div className="mb-6 grid size-16 place-items-center rounded-full bg-secondary text-secondary-foreground">
+          <div className="mb-6 grid size-16 place-items-center rounded-full bg-green-500 text-white">
             <Check size={32} />
           </div>
           <h1 className="text-xl font-bold">تم التحقق بنجاح</h1>
@@ -41,49 +94,68 @@ export function PaymentVerificationPage() {
 
   return (
     <Shell>
-      <div className="page-enter mx-auto max-w-md px-5 py-10 lg:py-16">
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
-              <LockKeyhole size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">التحقق من الدفع</h1>
-              <p className="text-xs text-muted-foreground">أدخل رمز التحقق المرسل لهاتفك</p>
-            </div>
+      <div className="page-enter mx-auto flex min-h-[calc(100vh-104px)] items-center justify-center px-5 py-10 lg:py-16">
+        {/* OTP Form Card */}
+        <div className="relative flex w-[230px] flex-col items-center justify-center gap-5 rounded-[15px] bg-white p-5 px-7 shadow-[0px_0px_20px_rgba(0,0,0,0.082)]">
+          {/* Exit Button */}
+          <button
+            onClick={() => setLocation('/payment')}
+            className="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.171)] text-lg text-black"
+          >
+            <X size={16} />
+          </button>
+
+          {/* Main Heading */}
+          <span className="text-[1.1em] font-bold text-[rgb(15,15,15)]">أدخل رمز التحقق</span>
+
+          {/* Subheading */}
+          <p className="text-center text-[0.7em] leading-[17px] text-black">
+            تم إرسال رمز التحقق إلى رقم هاتفك
+          </p>
+
+          {/* OTP Inputs */}
+          <div className="flex w-full flex-row items-center justify-center gap-2.5">
+            {code.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => { inputRefs.current[index] = el; }}
+                type="tel"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={handlePaste}
+                className="h-[30px] w-[30px] rounded-[7px] bg-[rgb(228,228,228)] text-center text-sm font-semibold text-[rgb(44,44,44)] outline-none caret-[rgb(127,129,255)] transition-all duration-300 focus:bg-[rgba(127,129,255,0.199)] focus:shadow-none"
+              />
+            ))}
           </div>
 
-          <div>
-            <Label htmlFor="otp-code" className="text-sm font-medium">رمز التحقق</Label>
-            <Input 
-              id="otp-code"
-              value={code} 
-              onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} 
-              inputMode="numeric" 
-              placeholder="000000" 
-              dir="ltr" 
-              className="mt-1.5 h-14 rounded-xl text-center text-2xl tracking-[.5em]" 
-            />
-          </div>
-
+          {/* Error Message */}
           {error && (
-            <p className="mt-4 text-sm text-destructive">{error}</p>
+            <p className="text-center text-[0.7em] text-red-500">{error}</p>
           )}
 
-          <Button 
-            onClick={verify} 
-            className="mt-6 h-14 w-full rounded-2xl text-base font-bold"
+          {/* Verify Button */}
+          <button
+            onClick={handleVerify}
+            className="h-[30px] w-full rounded-[10px] border-none bg-[rgb(127,129,255)] text-sm font-semibold text-white cursor-pointer transition-all duration-200 hover:bg-[rgb(144,145,255)]"
           >
-            تحقق <ArrowRight size={20} className="mr-2" />
-          </Button>
+            تحقق
+          </button>
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            أدخل "000000" لفشل العملية تجريبياً
+          {/* Resend Note */}
+          <p className="flex flex-col items-center justify-center gap-1 text-[0.7em] text-black">
+            <span>لم تستلم الرمز؟</span>
+            <button
+              onClick={handleResend}
+              className="bg-transparent border-none text-[rgb(127,129,255)] cursor-pointer text-[1.1em] font-bold"
+            >
+              إعادة إرسال
+            </button>
           </p>
         </div>
       </div>
     </Shell>
   );
 }
-
-import { Label } from '@/components/ui/label';
