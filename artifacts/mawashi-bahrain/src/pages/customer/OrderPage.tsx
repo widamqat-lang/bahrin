@@ -57,6 +57,7 @@ export function OrderPage() {
     const payload = { 
       productId: product.id, 
       productName: product.name, 
+      productPrice: product.price,
       quantity: Number(params.get('quantity') || '1'), 
       customerName, 
       phone, 

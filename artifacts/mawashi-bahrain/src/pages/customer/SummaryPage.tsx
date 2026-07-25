@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 type OrderDraft = { 
   productId: number; 
   productName: string; 
+  productPrice: number;
   quantity: number; 
   customerName: string; 
   phone: string; 
@@ -22,6 +23,10 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
+function money(value: number) {
+  return `${value.toFixed(3)} د.ب`;
+}
+
 function getDeliveryTimeLabel(time: string) {
   if (time === 'morning') return 'صباحاً';
   if (time === 'evening') return 'مساءً';
@@ -32,7 +37,7 @@ export function SummaryPage() {
   const [, setLocation] = useLocation();
   const createOrder = useCreateOrder();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
-  const [paymentType, setPaymentType] = useState<'cash' | 'online1' | 'online2'>('cash');
+  const [paymentType, setPaymentType] = useState<'cash' | 'online'>('cash');
 
   useEffect(() => {
     const raw = sessionStorage.getItem('mawashi-order-draft');
@@ -79,6 +84,8 @@ export function SummaryPage() {
     );
   };
 
+  const totalPrice = draft.productPrice * draft.quantity;
+
   return (
     <Shell>
       <div className="page-enter mx-auto max-w-2xl px-5 py-10 lg:py-16">
@@ -118,6 +125,12 @@ export function SummaryPage() {
           </div>
 
           <div className="mt-6 border-t border-border pt-6">
+            {/* Total Price */}
+            <div className="mb-4 flex items-center justify-between rounded-xl bg-primary/5 p-4">
+              <span className="font-medium">المبلغ الإجمالي</span>
+              <span className="font-mono-bahrain text-xl font-bold text-primary" dir="ltr">{money(totalPrice)}</span>
+            </div>
+
             <h2 className="mb-4 text-sm font-medium">طريقة الدفع</h2>
             
             <div className="space-y-3">
@@ -139,34 +152,18 @@ export function SummaryPage() {
 
               <button 
                 type="button" 
-                onClick={() => setPaymentType('online1')} 
+                onClick={() => setPaymentType('online')} 
                 data-testid="button-payment-online1" 
                 className={cn(
                   'flex w-full items-center gap-3 rounded-2xl border-2 p-4 transition',
-                  paymentType === 'online1' ? 'border-primary bg-primary/5' : 'border-border'
+                  paymentType === 'online' ? 'border-primary bg-primary/5' : 'border-border'
                 )}
               >
                 <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
                   <CreditCard size={20} />
                 </div>
-                <span className="flex-1 text-right font-medium">دفع الآن 1</span>
-                {paymentType === 'online1' && <div className="size-3 rounded-full bg-primary" />}
-              </button>
-
-              <button 
-                type="button" 
-                onClick={() => setPaymentType('online2')} 
-                data-testid="button-payment-online2" 
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl border-2 p-4 transition',
-                  paymentType === 'online2' ? 'border-primary bg-primary/5' : 'border-border'
-                )}
-              >
-                <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-                  <CreditCard size={20} />
-                </div>
-                <span className="flex-1 text-right font-medium">دفع الآن 2</span>
-                {paymentType === 'online2' && <div className="size-3 rounded-full bg-primary" />}
+                <span className="flex-1 text-right font-medium">الدفع الآن</span>
+                {paymentType === 'online' && <div className="size-3 rounded-full bg-primary" />}
               </button>
             </div>
           </div>
