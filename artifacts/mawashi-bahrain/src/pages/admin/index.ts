@@ -5,3 +5,4 @@ export { ProductsAdmin } from './ProductsAdmin';
 export { ContentAdmin } from './ContentAdmin';
 export { OrdersAdmin } from './OrdersAdmin';
 export { PresenceAdmin } from './PresenceAdmin';
+export { CustomersAdmin } from './CustomersAdmin';

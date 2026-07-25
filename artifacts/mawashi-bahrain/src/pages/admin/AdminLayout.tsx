@@ -12,6 +12,7 @@ import {
   Package,
   UsersRound,
   X,
+  Users,
 } from 'lucide-react';
 import { BrandMark } from '../shared';
 
@@ -19,7 +20,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence';
+type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence' | 'customers';
 
 interface AdminLayoutProps {
   tab: AdminTab;
@@ -33,6 +34,7 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const { signOut } = useClerk();
 
   const tabs = [
+    { id: 'customers' as const, label: 'العملاء', icon: Users },
     { id: 'overview' as const, label: 'نظرة عامة', icon: BarChart3 },
     { id: 'products' as const, label: 'المنتجات', icon: Package },
     { id: 'content' as const, label: 'محتوى المتجر', icon: FileText },
@@ -41,6 +43,7 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   ];
 
   const tabTitles: Record<AdminTab, string> = {
+    customers: 'العملاء',
     overview: 'صباح الخير، يا مدير',
     products: 'المنتجات',
     content: 'محتوى المتجر',
