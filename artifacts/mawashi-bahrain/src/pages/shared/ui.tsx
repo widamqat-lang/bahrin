@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 import {
   BadgeCheck,
   ChevronLeft,
@@ -14,7 +14,6 @@ import {
   X,
 } from 'lucide-react';
 import { BrandMark } from './BrandMark';
-import { IconButton } from './IconButton';
 
 const navItems = [
   { href: '/', label: 'الرئيسية', icon: Home },
@@ -23,7 +22,7 @@ const navItems = [
   { href: '/contact', label: 'اتصل بنا', icon: UserRound },
 ];
 
-export function Shell({ children, showSidebar = true }: { children: React.ReactNode; showSidebar?: boolean }) {
+export function Shell({ children, showSidebar = false }: { children: React.ReactNode; showSidebar?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -53,16 +52,20 @@ export function Shell({ children, showSidebar = true }: { children: React.ReactN
             <Link href="/order" className="mr-2 hidden items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary/90 sm:flex">
               <ShoppingBag size={14} /> اطلب الآن
             </Link>
-            <IconButton label="القائمة" onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden">
+            <button 
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="grid size-10 place-items-center rounded-full transition hover:bg-secondary/10 md:hidden"
+            >
               {mobileOpen ? <X size={19} /> : <Menu size={19} />}
-            </IconButton>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-[104px] z-30 border-b border-border bg-card p-4 shadow-card md:hidden">
+        <div className="fixed inset-x-0 top-[104px] z-30 border-b border-border bg-card p-4 shadow-card">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-muted">
               <Icon size={18} />{label}
@@ -78,7 +81,7 @@ export function Shell({ children, showSidebar = true }: { children: React.ReactN
       )}
 
       {/* Main Content Area */}
-      <div className="mx-auto flex max-w-[1480px] pt-[104px] md:pt-[104px]">
+      <div className="mx-auto flex max-w-[1480px] pt-[104px]">
         {showSidebar && (
           <aside className="sticky top-[104px] hidden h-[calc(100dvh-104px)] w-[216px] shrink-0 flex-col border-l border-border/80 px-5 py-10 md:flex">
             <div className="mb-8 px-3 font-mono-bahrain text-[9px] uppercase tracking-[.18em] text-muted-foreground" dir="ltr">A GOOD CUT, DELIVERED</div>
