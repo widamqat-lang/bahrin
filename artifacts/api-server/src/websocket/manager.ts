@@ -1,12 +1,13 @@
 // ============================================
 // WebSocket Presence Manager
 // ============================================
-// Manages real-time presence tracking for customers
+// Manages real-time presence tracking for customers using visitorId
 
 import type { WebSocket } from "ws";
 
 export interface PresenceClient {
   sessionId: string;
+  visitorId: string;
   ws: WebSocket;
   currentPage: string;
   customerName: string;
@@ -21,9 +22,10 @@ class PresenceManager {
   private updateHandlers: Set<PresenceUpdateHandler> = new Set();
 
   // Register a new client
-  register(sessionId: string, ws: WebSocket): void {
+  register(sessionId: string, visitorId: string, ws: WebSocket): void {
     this.clients.set(sessionId, {
       sessionId,
+      visitorId,
       ws,
       currentPage: "غير متصل",
       customerName: "",
@@ -37,14 +39,19 @@ class PresenceManager {
   unregister(sessionId: string): void {
     const client = this.clients.get(sessionId);
     if (client) {
-      client.lastSeenAt = new Date(); // Update last seen before removing
+      client.lastSeenAt = new Date();
     }
     this.clients.delete(sessionId);
     this.notifyHandlers();
   }
 
   // Update client presence info
-  updatePresence(sessionId: string, data: { page?: string; customerName?: string; orderId?: number | null }): void {
+  updatePresence(sessionId: string, data: { 
+    page?: string; 
+    customerName?: string; 
+    orderId?: number | null;
+    visitorId?: string;
+  }): void {
     const client = this.clients.get(sessionId);
     if (client) {
       if (data.page !== undefined) {
@@ -55,6 +62,9 @@ class PresenceManager {
       }
       if (data.orderId !== undefined) {
         client.orderId = data.orderId;
+      }
+      if (data.visitorId !== undefined) {
+        client.visitorId = data.visitorId;
       }
       client.lastSeenAt = new Date();
       this.notifyHandlers();
@@ -69,6 +79,11 @@ class PresenceManager {
   // Get a specific client
   getClient(sessionId: string): PresenceClient | undefined {
     return this.clients.get(sessionId);
+  }
+
+  // Get client by visitorId
+  getClientByVisitorId(visitorId: string): PresenceClient | undefined {
+    return Array.from(this.clients.values()).find(c => c.visitorId === visitorId);
   }
 
   // Subscribe to presence updates
@@ -101,10 +116,33 @@ class PresenceManager {
     });
   }
 
-  // Broadcast to all admin clients
+  // Broadcast to a specific visitor
+  broadcastToVisitor(visitorId: string, message: object): void {
+    const data = JSON.stringify(message);
+    this.clients.forEach((client) => {
+      if (client.visitorId === visitorId && client.ws.readyState === 1) {
+        client.ws.send(data);
+      }
+    });
+  }
+
+  // Broadcast to all admin clients (sessions without visitorId or on /admin)
+  broadcastToAdmins(message: object): void {
+    const data = JSON.stringify(message);
+    this.clients.forEach((client) => {
+      // Check if this is an admin client (no visitorId or on admin page)
+      const isAdmin = !client.visitorId || client.currentPage.includes('/admin');
+      if (isAdmin && client.ws.readyState === 1) {
+        client.ws.send(data);
+      }
+    });
+  }
+
+  // Broadcast presence update to all clients
   broadcastPresenceUpdate(): void {
     const clients = this.getClients().map((c) => ({
       sessionId: c.sessionId,
+      visitorId: c.visitorId,
       currentPage: c.currentPage,
       customerName: c.customerName,
       orderId: c.orderId,
@@ -124,6 +162,11 @@ class PresenceManager {
     if (client && client.ws.readyState === 1) {
       client.ws.send(JSON.stringify(message));
     }
+  }
+
+  // Send targeted update to a specific visitor
+  sendToVisitor(visitorId: string, message: object): void {
+    this.broadcastToVisitor(visitorId, message);
   }
 }
 

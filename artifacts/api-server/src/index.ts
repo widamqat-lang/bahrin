@@ -30,18 +30,20 @@ let connectedClients = 0;
 wss.on("connection", (ws: WebSocket, req) => {
   connectedClients++;
   
-  // Extract session ID from query string
+  // Extract session ID and visitor ID from query string
   const url = new URL(req.url || "", `http://${req.headers.host}`);
   const sessionId = url.searchParams.get("sessionId") || `anon-${Date.now()}`;
+  const visitorId = url.searchParams.get("visitorId") || "";
 
-  logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client connected");
+  logger.info({ sessionId, visitorId, totalClients: connectedClients }, "WebSocket client connected");
 
-  // Register client
-  presenceManager.register(sessionId, ws);
+  // Register client with visitorId
+  presenceManager.register(sessionId, visitorId, ws);
 
   // Send initial presence data
   const initialClients = presenceManager.getClients().map((c) => ({
     sessionId: c.sessionId,
+    visitorId: c.visitorId,
     currentPage: c.currentPage,
     customerName: c.customerName,
     orderId: c.orderId,
@@ -52,6 +54,7 @@ wss.on("connection", (ws: WebSocket, req) => {
   ws.send(JSON.stringify({
     type: "connected",
     sessionId,
+    visitorId,
     clients: initialClients,
   }));
 
@@ -59,7 +62,6 @@ wss.on("connection", (ws: WebSocket, req) => {
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
-      logger.info({ sessionId, messageType: message.type }, "WebSocket message received");
 
       switch (message.type) {
         case "presence_update":
@@ -67,20 +69,10 @@ wss.on("connection", (ws: WebSocket, req) => {
             page: message.page,
             customerName: message.customerName,
             orderId: message.orderId ? Number(message.orderId) : null,
+            visitorId: message.visitorId || visitorId,
           });
           
-          // Broadcast to all clients immediately
-          const allClients = presenceManager.getClients();
-          logger.info({ 
-            sessionId, 
-            clientsCount: allClients.length,
-            updatedData: { 
-              page: message.page, 
-              customerName: message.customerName,
-              orderId: message.orderId 
-            }
-          }, "Broadcasting presence update");
-          
+          // Broadcast to all clients
           presenceManager.broadcastPresenceUpdate();
           break;
 
@@ -96,29 +88,18 @@ wss.on("connection", (ws: WebSocket, req) => {
   // Handle disconnect
   ws.on("close", () => {
     connectedClients--;
-    logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client disconnected");
+    logger.info({ sessionId, visitorId, totalClients: connectedClients }, "WebSocket client disconnected");
     
-    // Keep the client's last data before removing
-    const clientData = presenceManager.getClient(sessionId);
     presenceManager.unregister(sessionId);
     
     // Broadcast updated presence to remaining clients
     presenceManager.broadcastPresenceUpdate();
-    
-    logger.info({ 
-      sessionId, 
-      lastData: clientData ? {
-        currentPage: clientData.currentPage,
-        customerName: clientData.customerName,
-        orderId: clientData.orderId,
-      } : null
-    }, "Client unregistered");
   });
 
   // Handle errors
   ws.on("error", (error) => {
     connectedClients--;
-    logger.error({ error, sessionId }, "WebSocket error");
+    logger.error({ error, sessionId, visitorId }, "WebSocket error");
     presenceManager.unregister(sessionId);
   });
 });

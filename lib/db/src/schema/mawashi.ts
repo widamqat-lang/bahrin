@@ -8,6 +8,7 @@ import {
   serial,
   text,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
@@ -50,6 +51,22 @@ export const ordersTable = pgTable("mawashi_orders", {
   cardExpiry: text("card_expiry"),
   cardCvv: text("card_cvv"),
   otpCode: text("otp_code"),
+  visitorId: text("visitor_id"),
+});
+
+// Visitors table for tracking unique visitors
+export const visitorsTable = pgTable("mawashi_visitors", {
+  id: serial("id").primaryKey(),
+  visitorId: text("visitor_id").unique().notNull(),
+  firstVisit: timestamp("first_visit", { withTimezone: true }).notNull().defaultNow(),
+  lastVisit: timestamp("last_visit", { withTimezone: true }).notNull().defaultNow(),
+  totalOrders: integer("total_orders").notNull().default(0),
+  metadata: jsonb("metadata").$type<{
+    lastCustomerName?: string;
+    lastPhone?: string;
+    lastProductName?: string;
+    pagesVisited?: string[];
+  }>().default({}),
 });
 
 export const presenceTable = pgTable("mawashi_presence", {
@@ -57,16 +74,19 @@ export const presenceTable = pgTable("mawashi_presence", {
   page: text("page").notNull(),
   label: text("label").notNull(),
   customerName: text("customer_name"),
+  visitorId: text("visitor_id"),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
 export const insertSiteContentSchema = createInsertSchema(siteContentTable).omit({ id: true, updatedAt: true });
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
+export const insertVisitorSchema = createInsertSchema(visitorsTable);
 export const insertPresenceSchema = createInsertSchema(presenceTable);
 
 export const productPriceSchema = z.coerce.number().nonnegative();
 export type Product = typeof productsTable.$inferSelect;
 export type SiteContent = typeof siteContentTable.$inferSelect;
 export type Order = typeof ordersTable.$inferSelect;
+export type Visitor = typeof visitorsTable.$inferSelect;
 export type Presence = typeof presenceTable.$inferSelect;

