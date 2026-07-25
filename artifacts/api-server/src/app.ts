@@ -37,7 +37,7 @@ const frontendPath = path.join(__dirname, "../../mawashi-bahrain/dist/public");
 app.use(express.static(frontendPath));
 
 // SPA fallback - serve index.html for all non-API routes
-app.get("*", (_req: Request, res: Response) => {
+app.get("{*path}", (_req: Request, res: Response) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
