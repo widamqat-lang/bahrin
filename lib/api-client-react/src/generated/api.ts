@@ -24,6 +24,7 @@ import type {
   HealthStatus,
   Order,
   OrderInput,
+  OrderUpdate,
   Presence,
   PresenceInput,
   Product,
@@ -440,6 +441,78 @@ export function useListAdminOrders<TData = Awaited<ReturnType<typeof listAdminOr
 
 
 
+
+export const getUpdateOrderUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/orders/${id}`
+}
+
+/**
+ * @summary Update order with payment and verification data
+ */
+export const updateOrder = async (id: number,
+    orderUpdate: OrderUpdate, options?: RequestInit): Promise<Order> => {
+
+  return customFetch<Order>(getUpdateOrderUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orderUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrder>>, TError,{id: number;data: BodyType<OrderUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrder>>, TError,{id: number;data: BodyType<OrderUpdate>}, TContext> => {
+
+const mutationKey = ['updateOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrder>>, {id: number;data: BodyType<OrderUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrder>>>
+    export type UpdateOrderMutationBody = BodyType<OrderUpdate>
+    export type UpdateOrderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update order with payment and verification data
+ */
+export const useUpdateOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrder>>, TError,{id: number;data: BodyType<OrderUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrder>>,
+        TError,
+        {id: number;data: BodyType<OrderUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateOrderMutationOptions(options));
+    }
 
 export const getGetAdminSummaryUrl = () => {
 

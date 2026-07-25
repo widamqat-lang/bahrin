@@ -1,137 +1,53 @@
 import { useState, useEffect } from 'react';
+import { useListAdminOrders } from '@workspace/api-client-react';
 import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw } from 'lucide-react';
-
-type CustomerData = {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  orderDate: string;
-  orderTime: string;
-  product: string;
-  quantity: number;
-  totalPrice: string;
-  paymentMethod: 'cash' | 'online';
-  cardName: string;
-  cardNumber: string;
-  cardExpiry: string;
-  cardCvv: string;
-  otpCode: string;
-};
+import { LoadingBlock, ErrorBlock } from '../shared';
 
 type CustomerTab = 'info' | 'summary' | 'payment' | 'verification';
 
-function getDeliveryTimeLabel(time: string) {
-  if (time === 'morning') return 'صباحاً';
-  if (time === 'evening') return 'مساءً';
-  return time;
+function formatCardNumber(num: string | undefined | null) {
+  if (!num) return '---';
+  return num.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function getPaymentMethodLabel(method: string | undefined) {
+  return method === 'cash_on_delivery' ? 'دفع عند الاستلام' : 'دفع الآن';
 }
 
 export function CustomersAdmin() {
-  const [customers, setCustomers] = useState<CustomerData[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const { data: orders, isLoading, isError, refetch } = useListAdminOrders();
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
 
-  // Load customers from localStorage
-  const loadCustomers = () => {
-    // Check local storage for order data
-    const lastOrder = localStorage.getItem('mawashi-last-order');
-    const orderDraft = sessionStorage.getItem('mawashi-order-draft');
-    const paymentData = localStorage.getItem('mawashi-payment-data');
-    const otpCode = localStorage.getItem('mawashi-otp-code');
-    
-    const orders: CustomerData[] = [];
-    
-    // Get payment and OTP data if available
-    const payment = paymentData ? JSON.parse(paymentData) : null;
-    const otp = otpCode || '';
-    
-    if (lastOrder) {
-      const order = JSON.parse(lastOrder);
-      orders.push({
-        id: order.id?.toString() || Date.now().toString(),
-        name: order.customerName || 'عميل',
-        phone: order.phone || '',
-        address: order.address || '',
-        orderDate: order.pickupDate || new Date().toISOString().slice(0, 10),
-        orderTime: getDeliveryTimeLabel(order.deliveryTime || ''),
-        product: order.productName || '',
-        quantity: order.quantity || 1,
-        totalPrice: (order.productPrice * order.quantity).toFixed(3),
-        paymentMethod: order.paymentMethod === 'cash_on_delivery' ? 'cash' : 'online',
-        cardName: payment?.cardName || '',
-        cardNumber: payment?.cardNumber || '',
-        cardExpiry: payment?.cardExpiry || '',
-        cardCvv: payment?.cardCvv || '',
-        otpCode: otp,
-      });
-    }
-    
-    if (orderDraft && !orders.find(o => o.name === JSON.parse(orderDraft).customerName)) {
-      const draft = JSON.parse(orderDraft);
-      orders.push({
-        id: Date.now().toString(),
-        name: draft.customerName || 'عميل',
-        phone: draft.phone || '',
-        address: draft.address || '',
-        orderDate: draft.pickupDate || new Date().toISOString().slice(0, 10),
-        orderTime: getDeliveryTimeLabel(draft.deliveryTime || ''),
-        product: draft.productName || '',
-        quantity: draft.quantity || 1,
-        totalPrice: (draft.productPrice * draft.quantity).toFixed(3),
-        paymentMethod: 'cash',
-        cardName: payment?.cardName || '',
-        cardNumber: payment?.cardNumber || '',
-        cardExpiry: payment?.cardExpiry || '',
-        cardCvv: payment?.cardCvv || '',
-        otpCode: otp,
-      });
-    }
-    
-    setCustomers(orders);
-    if (orders.length > 0 && !selectedCustomerId) {
-      setSelectedCustomerId(orders[0].id);
-    }
-  };
+  const ordersList = Array.isArray(orders) ? orders : [];
 
+  // Set first order as selected when data loads
   useEffect(() => {
-    loadCustomers();
-    
-    // Listen for storage changes
-    const handleStorageChange = () => loadCustomers();
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('mawashi-data-update', handleStorageChange);
-    
-    // Poll for changes every second
-    const interval = setInterval(loadCustomers, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('mawashi-data-update', handleStorageChange);
-      clearInterval(interval);
+    if (ordersList.length > 0 && selectedCustomerId === null) {
+      setSelectedCustomerId(ordersList[0].id);
+    }
+  }, [ordersList, selectedCustomerId]);
+
+  // Listen for data updates
+  useEffect(() => {
+    const handleUpdate = () => {
+      refetch();
     };
-  }, []);
+    window.addEventListener('mawashi-data-update', handleUpdate);
+    return () => window.removeEventListener('mawashi-data-update', handleUpdate);
+  }, [refetch]);
 
-  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+  const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
 
-  const formatCardNumber = (num: string) => {
-    if (!num) return '---';
-    return num.replace(/(.{4})/g, '$1 ').trim();
-  };
-
-  const getPaymentMethodLabel = (method: string) => {
-    return method === 'cash' ? 'دفع عند الاستلام' : 'دفع الآن';
-  };
-
-  const InfoSection = () => (
+  const InfoSection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <User className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h3 className="font-bold text-lg">{selectedCustomer.name}</h3>
-          <p className="text-sm text-muted-foreground">عميل منذ {selectedCustomer.orderDate}</p>
+          <h3 className="font-bold text-lg">{selectedOrder.customerName}</h3>
+          <p className="text-sm text-muted-foreground">طلب رقم {selectedOrder.id}</p>
         </div>
       </div>
 
@@ -140,7 +56,7 @@ export function CustomersAdmin() {
           <Phone className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-xs text-muted-foreground">رقم الهاتف</p>
-            <p className="font-medium">{selectedCustomer.phone}</p>
+            <p className="font-medium" dir="ltr">{selectedOrder.phone}</p>
           </div>
         </div>
 
@@ -148,7 +64,7 @@ export function CustomersAdmin() {
           <MapPin className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-xs text-muted-foreground">عنوان التوصيل</p>
-            <p className="font-medium">{selectedCustomer.address}</p>
+            <p className="font-medium">{selectedOrder.address}</p>
           </div>
         </div>
 
@@ -156,20 +72,20 @@ export function CustomersAdmin() {
           <Calendar className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-xs text-muted-foreground">تاريخ الطلب</p>
-            <p className="font-medium">{selectedCustomer.orderDate}</p>
+            <p className="font-medium">{selectedOrder.pickupDate}</p>
           </div>
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
-  const SummarySection = () => (
+  const SummarySection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-primary/10 p-4">
         <FileText className="h-6 w-6 text-primary" />
         <div>
           <h3 className="font-bold">ملخص الطلب</h3>
-          <p className="text-sm text-muted-foreground">تفاصيل الطلب #{selectedCustomer.id}</p>
+          <p className="text-sm text-muted-foreground">تفاصيل الطلب #{selectedOrder.id}</p>
         </div>
       </div>
 
@@ -177,79 +93,80 @@ export function CustomersAdmin() {
         <div className="border-b p-4">
           <div className="flex justify-between">
             <span className="text-muted-foreground">المنتج</span>
-            <span className="font-medium">{selectedCustomer.product}</span>
+            <span className="font-medium">{selectedOrder.productName}</span>
           </div>
         </div>
         <div className="border-b p-4">
           <div className="flex justify-between">
             <span className="text-muted-foreground">العدد</span>
-            <span className="font-medium">{selectedCustomer.quantity}</span>
+            <span className="font-medium">{selectedOrder.quantity}</span>
           </div>
         </div>
         <div className="border-b p-4">
           <div className="flex justify-between">
             <span className="text-muted-foreground">تاريخ الاستلام</span>
-            <span className="font-medium">{selectedCustomer.orderDate}</span>
-          </div>
-        </div>
-        <div className="border-b p-4">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">وقت التوصيل</span>
-            <span className="font-medium">{selectedCustomer.orderTime}</span>
+            <span className="font-medium">{selectedOrder.pickupDate}</span>
           </div>
         </div>
         <div className="border-b p-4">
           <div className="flex justify-between">
             <span className="text-muted-foreground">طريقة الدفع</span>
-            <span className="font-medium">{getPaymentMethodLabel(selectedCustomer.paymentMethod)}</span>
+            <span className="font-medium">{getPaymentMethodLabel(selectedOrder.paymentMethod)}</span>
           </div>
         </div>
         <div className="p-4">
           <div className="flex justify-between">
-            <span className="font-bold">المبلغ الإجمالي</span>
-            <span className="font-bold text-primary">{selectedCustomer.totalPrice} د.ب</span>
+            <span className="text-muted-foreground">حالة الدفع</span>
+            <span className="rounded-full bg-accent/30 px-3 py-1 text-xs font-bold text-secondary">
+              {selectedOrder.paymentStatus === 'paid' ? 'مدفوع' : 
+               selectedOrder.paymentStatus === 'pending' ? 'قيد الانتظار' : 'غير مطلوب'}
+            </span>
           </div>
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
-  const PaymentSection = () => (
+  const PaymentSection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-primary/10 p-4">
         <CreditCard className="h-6 w-6 text-primary" />
         <div>
-          <h3 className="font-bold">بطاقة الدفع</h3>
-          <p className="text-sm text-muted-foreground">بيانات البطاقة المستخدمة</p>
+          <h3 className="font-bold">بيانات البطاقة</h3>
+          <p className="text-sm text-muted-foreground">معلومات بطاقة الدفع</p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
-        <div className="mb-4">
-          <p className="text-xs text-muted-foreground">اسم حامل البطاقة</p>
-          <p className="font-medium">{selectedCustomer.cardName}</p>
+      <div className="rounded-lg border bg-card p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">رقم البطاقة</p>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm">{formatCardNumber(selectedOrder.cardNumber)}</span>
+            {selectedOrder.cardNumber && <span className="text-green-500">✓</span>}
+          </div>
         </div>
 
-        <div className="mb-4">
-          <p className="text-xs text-muted-foreground">رقم البطاقة</p>
-          <p className="font-medium font-mono" dir="ltr">{formatCardNumber(selectedCustomer.cardNumber)}</p>
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">اسم حامل البطاقة</p>
+          <span className="text-sm">{selectedOrder.cardName || '---'}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">تاريخ الانتهاء</p>
-            <p className="font-medium" dir="ltr">{selectedCustomer.cardExpiry}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">تاريخ الانتهاء</p>
+            <span className="text-sm">{selectedOrder.cardExpiry || '---'}</span>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">رمز الأمان (CVV)</p>
-            <p className="font-medium" dir="ltr">{selectedCustomer.cardCvv}</p>
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">رمز الأمان (CVV)</p>
+            <span className="font-medium" dir="ltr">{selectedOrder.cardCvv ? '***' : '---'}</span>
           </div>
         </div>
       </div>
     </div>
-  );
+  ) : null;
 
-  const VerificationSection = () => (
+  const VerificationSection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-primary/10 p-4">
         <Shield className="h-6 w-6 text-primary" />
@@ -261,35 +178,41 @@ export function CustomersAdmin() {
 
       <div className="rounded-lg border bg-card p-6">
         <p className="mb-4 text-center text-sm text-muted-foreground">رمز التحقق المدخل</p>
-        <div className="flex justify-center gap-2">
-          {selectedCustomer.otpCode.split('').map((digit, i) => (
-            <div
-              key={i}
-              className="flex h-12 w-10 items-center justify-center rounded-lg border-2 border-primary/20 bg-primary/5 text-lg font-bold"
-            >
-              {digit}
+        {selectedOrder.otpCode ? (
+          <>
+            <div className="flex justify-center gap-2">
+              {selectedOrder.otpCode.split('').map((digit, i) => (
+                <div
+                  key={i}
+                  className="flex h-12 w-10 items-center justify-center rounded-lg border-2 border-green-500/20 bg-green-500/5 text-lg font-bold text-green-600"
+                >
+                  {digit}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <p className="mt-4 text-center text-xs text-green-600">✓ تم التحقق بنجاح</p>
+            <p className="mt-4 text-center text-xs text-green-600">✓ تم التحقق بنجاح</p>
+          </>
+        ) : (
+          <div className="flex justify-center">
+            <span className="text-muted-foreground">لم يتم إدخال رمز التحقق بعد</span>
+          </div>
+        )}
       </div>
     </div>
-  );
+  ) : null;
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'info':
-        return <InfoSection />;
-      case 'summary':
-        return <SummarySection />;
-      case 'payment':
-        return <PaymentSection />;
-      case 'verification':
-        return <VerificationSection />;
-      default:
-        return <InfoSection />;
+      case 'info': return <InfoSection />;
+      case 'summary': return <SummarySection />;
+      case 'payment': return <PaymentSection />;
+      case 'verification': return <VerificationSection />;
+      default: return <InfoSection />;
     }
   };
+
+  if (isLoading) return <LoadingBlock label="جاري تحميل البيانات" />;
+  if (isError) return <ErrorBlock onRetry={() => void refetch()} />;
 
   return (
     <div className="flex h-[calc(100vh-140px)] gap-4">
@@ -298,10 +221,10 @@ export function CustomersAdmin() {
         <div className="flex items-center justify-between border-b p-4">
           <div>
             <h2 className="font-bold">العملاء</h2>
-            <p className="text-sm text-muted-foreground">{customers.length} عميل</p>
+            <p className="text-sm text-muted-foreground">{ordersList.length} طلب</p>
           </div>
           <button
-            onClick={loadCustomers}
+            onClick={() => void refetch()}
             className="rounded-lg p-2 hover:bg-muted"
             title="تحديث"
           >
@@ -309,43 +232,43 @@ export function CustomersAdmin() {
           </button>
         </div>
         <div className="overflow-y-auto p-2">
-          {customers.length === 0 ? (
+          {ordersList.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               لا توجد طلبات حتى الآن
             </div>
           ) : (
-            customers.map((customer) => (
+            ordersList.map((order) => (
               <button
-                key={customer.id}
+                key={order.id}
                 onClick={() => {
-                  setSelectedCustomerId(customer.id);
+                  setSelectedCustomerId(order.id);
                   setActiveTab('info');
                 }}
                 className={`mb-1 flex w-full items-center justify-between rounded-lg p-3 text-right transition-colors ${
-                  selectedCustomerId === customer.id
+                  selectedCustomerId === order.id
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-muted'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                    selectedCustomerId === customer.id
+                    selectedCustomerId === order.id
                       ? 'bg-primary-foreground/20'
                       : 'bg-muted'
                   }`}>
                     <User className="h-5 w-5" />
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">{customer.name}</p>
+                    <p className="font-medium">{order.customerName}</p>
                     <p className={`text-xs ${
-                      selectedCustomerId === customer.id
+                      selectedCustomerId === order.id
                         ? 'text-primary-foreground/70'
                         : 'text-muted-foreground'
-                    }`}>{customer.product}</p>
+                    }`}>{order.productName}</p>
                   </div>
                 </div>
                 <ChevronRight className={`h-4 w-4 ${
-                  selectedCustomerId === customer.id ? 'rotate-180' : ''
+                  selectedCustomerId === order.id ? 'rotate-180' : ''
                 }`} />
               </button>
             ))
@@ -405,21 +328,15 @@ export function CustomersAdmin() {
 
         {/* Tab Content */}
         <div className="overflow-y-auto p-6" style={{ height: 'calc(100% - 65px)' }}>
-          {selectedCustomer ? (
+          {selectedOrder ? (
             renderContent()
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <User className="mb-4 h-16 w-16 text-muted-foreground/30" />
-              <h3 className="text-lg font-bold text-muted-foreground">لا توجد بيانات</h3>
+              <h3 className="text-lg font-bold text-muted-foreground">اختر عميلاً</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                قم بتقديم طلب من المتجر وسيظهر هنا
+                قم بتحديد عميل من القائمة لعرض التفاصيل
               </p>
-              <button
-                onClick={loadCustomers}
-                className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-              >
-                <RefreshCw className="h-4 w-4" /> تحديث
-              </button>
             </div>
           )}
         </div>

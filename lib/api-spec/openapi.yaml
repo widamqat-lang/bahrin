@@ -88,6 +88,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Order"
+  /admin/orders/{id}:
+    patch:
+      operationId: updateOrder
+      tags: [admin]
+      summary: Update order with payment and verification data
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
   /admin/summary:
     get:
       operationId: getAdminSummary
@@ -298,6 +318,25 @@ components:
           type: string
           enum: [new, confirmed, preparing, completed, cancelled]
         createdAt: { type: string, format: date-time }
+        cardName: { type: string }
+        cardNumber: { type: string }
+        cardExpiry: { type: string }
+        cardCvv: { type: string }
+        otpCode: { type: string }
+    OrderUpdate:
+      type: object
+      properties:
+        cardName: { type: string }
+        cardNumber: { type: string }
+        cardExpiry: { type: string }
+        cardCvv: { type: string }
+        otpCode: { type: string }
+        paymentStatus:
+          type: string
+          enum: [pending, paid, not_required]
+        status:
+          type: string
+          enum: [new, confirmed, preparing, completed, cancelled]
     AdminSummary:
       type: object
       required: [totalOrders, newOrders, todayOrders, activeVisitors]

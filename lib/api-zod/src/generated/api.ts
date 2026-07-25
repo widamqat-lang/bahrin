@@ -91,7 +91,12 @@ export const CreateOrderResponse = zod.object({
   "paymentMethod": zod.enum(['cash_on_delivery', 'pay_now']),
   "paymentStatus": zod.enum(['pending', 'paid', 'not_required']),
   "status": zod.enum(['new', 'confirmed', 'preparing', 'completed', 'cancelled']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "cardName": zod.string().optional(),
+  "cardNumber": zod.string().optional(),
+  "cardExpiry": zod.string().optional(),
+  "cardCvv": zod.string().optional(),
+  "otpCode": zod.string().optional()
 })
 
 
@@ -110,9 +115,52 @@ export const ListAdminOrdersResponseItem = zod.object({
   "paymentMethod": zod.enum(['cash_on_delivery', 'pay_now']),
   "paymentStatus": zod.enum(['pending', 'paid', 'not_required']),
   "status": zod.enum(['new', 'confirmed', 'preparing', 'completed', 'cancelled']),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "cardName": zod.string().optional(),
+  "cardNumber": zod.string().optional(),
+  "cardExpiry": zod.string().optional(),
+  "cardCvv": zod.string().optional(),
+  "otpCode": zod.string().optional()
 })
 export const ListAdminOrdersResponse = zod.array(ListAdminOrdersResponseItem)
+
+
+/**
+ * @summary Update order with payment and verification data
+ */
+export const UpdateOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOrderBody = zod.object({
+  "cardName": zod.string().optional(),
+  "cardNumber": zod.string().optional(),
+  "cardExpiry": zod.string().optional(),
+  "cardCvv": zod.string().optional(),
+  "otpCode": zod.string().optional(),
+  "paymentStatus": zod.enum(['pending', 'paid', 'not_required']).optional(),
+  "status": zod.enum(['new', 'confirmed', 'preparing', 'completed', 'cancelled']).optional()
+})
+
+export const UpdateOrderResponse = zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "quantity": zod.number(),
+  "customerName": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string(),
+  "pickupDate": zod.coerce.date(),
+  "paymentMethod": zod.enum(['cash_on_delivery', 'pay_now']),
+  "paymentStatus": zod.enum(['pending', 'paid', 'not_required']),
+  "status": zod.enum(['new', 'confirmed', 'preparing', 'completed', 'cancelled']),
+  "createdAt": zod.coerce.date(),
+  "cardName": zod.string().optional(),
+  "cardNumber": zod.string().optional(),
+  "cardExpiry": zod.string().optional(),
+  "cardCvv": zod.string().optional(),
+  "otpCode": zod.string().optional()
+})
 
 
 /**

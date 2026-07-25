@@ -22,4 +22,9 @@ export interface Order {
   paymentStatus: OrderPaymentStatus;
   status: OrderStatus;
   createdAt: Date;
+  cardName?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  otpCode?: string;
 }

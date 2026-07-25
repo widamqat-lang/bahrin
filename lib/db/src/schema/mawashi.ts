@@ -45,6 +45,11 @@ export const ordersTable = pgTable("mawashi_orders", {
   paymentStatus: text("payment_status").notNull().default("not_required"),
   status: text("status").notNull().default("new"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  cardName: text("card_name"),
+  cardNumber: text("card_number"),
+  cardExpiry: text("card_expiry"),
+  cardCvv: text("card_cvv"),
+  otpCode: text("otp_code"),
 });
 
 export const presenceTable = pgTable("mawashi_presence", {

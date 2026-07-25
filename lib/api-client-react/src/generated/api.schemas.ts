@@ -146,6 +146,41 @@ export interface Order {
   paymentStatus: OrderPaymentStatus;
   status: OrderStatus;
   createdAt: string;
+  cardName?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  otpCode?: string;
+}
+
+export type OrderUpdatePaymentStatus = typeof OrderUpdatePaymentStatus[keyof typeof OrderUpdatePaymentStatus];
+
+
+export const OrderUpdatePaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+  not_required: 'not_required',
+} as const;
+
+export type OrderUpdateStatus = typeof OrderUpdateStatus[keyof typeof OrderUpdateStatus];
+
+
+export const OrderUpdateStatus = {
+  new: 'new',
+  confirmed: 'confirmed',
+  preparing: 'preparing',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface OrderUpdate {
+  cardName?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  otpCode?: string;
+  paymentStatus?: OrderUpdatePaymentStatus;
+  status?: OrderUpdateStatus;
 }
 
 export interface AdminSummary {
