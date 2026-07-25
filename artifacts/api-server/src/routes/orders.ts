@@ -3,6 +3,20 @@ import { eq } from "drizzle-orm";
 import { db, ordersTable, productsTable } from "@workspace/db";
 import { CreateOrderBody } from "@workspace/api-zod";
 
+// Dynamic import to avoid circular dependency
+let presenceManager: any = null;
+async function getPresenceManager() {
+  if (!presenceManager) {
+    try {
+      const module = await import("../websocket/manager");
+      presenceManager = module.presenceManager;
+    } catch (e) {
+      console.error("Failed to load presence manager:", e);
+    }
+  }
+  return presenceManager;
+}
+
 const router = Router();
 
 router.post("/orders", async (req, res, next) => {
@@ -42,6 +56,21 @@ router.post("/orders", async (req, res, next) => {
         status: "new",
       })
       .returning();
+
+    // Broadcast new order to all admin clients for real-time updates
+    const pm = await getPresenceManager();
+    if (pm) {
+      pm.broadcastToAdmins({
+        type: "new_order",
+        order: {
+          id: order.id,
+          customerName: order.customerName,
+          phone: order.phone,
+          productName: order.productName,
+          createdAt: order.createdAt.toISOString(),
+        },
+      });
+    }
 
     res.status(201).json(order);
   } catch (error) {

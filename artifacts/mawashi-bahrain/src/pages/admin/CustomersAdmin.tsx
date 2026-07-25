@@ -38,11 +38,21 @@ function getPageDisplayName(path: string): string {
 export function CustomersAdmin() {
   const { data: orders, isLoading, isError, refetch } = useListAdminOrders({
     query: {
-      refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+      refetchInterval: 3000, // Refetch every 3 seconds as fallback
     },
   });
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
+
+  // Listen for real-time new order events via WebSocket
+  useEffect(() => {
+    const handleNewOrder = () => {
+      console.log("[Admin] New order detected - refetching immediately");
+      void refetch();
+    };
+    window.addEventListener('mawashi-new-order', handleNewOrder);
+    return () => window.removeEventListener('mawashi-new-order', handleNewOrder);
+  }, [refetch]);
   
   // Real-time presence from WebSocket
   const { presenceClients, isConnected } = usePresence();

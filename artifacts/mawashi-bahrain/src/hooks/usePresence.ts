@@ -142,6 +142,12 @@ export function usePresence(options: UsePresenceOptions = {}) {
             onPresenceUpdate?.(clients);
             break;
 
+          case "new_order":
+            console.log("[Presence] New order received:", message.order);
+            // Dispatch custom event for admin pages to refetch orders
+            window.dispatchEvent(new CustomEvent("mawashi-new-order", { detail: message.order }));
+            break;
+
           case "pong":
             break;
         }
