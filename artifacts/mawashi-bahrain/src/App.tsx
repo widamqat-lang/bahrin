@@ -34,6 +34,7 @@ import {
   PresenceAdmin,
   CustomersAdmin,
   SettingsAdmin,
+  AdminLogin,
 } from './pages/admin';
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ function ClerkQueryCache() {
 function ClerkRouter() {
   return (
     <Switch>
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/sign-in/*?" component={() => (
         <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
           <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />

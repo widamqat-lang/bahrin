@@ -46,6 +46,12 @@ export function SettingsAdmin() {
       return;
     }
 
+    // Require current password to update
+    if (!currentPassword) {
+      setMessage({ type: 'error', text: 'كلمة المرور الحالية مطلوبة' });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -54,7 +60,7 @@ export function SettingsAdmin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email,
-          currentPassword: currentPassword || undefined,
+          currentPassword: currentPassword,
           password: newPassword || undefined
         })
       });
@@ -144,7 +150,7 @@ export function SettingsAdmin() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="currentPassword" className="text-sm font-medium">كلمة المرور الحالية</label>
+              <label htmlFor="currentPassword" className="text-sm font-medium">كلمة المرور الحالية <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input
                   id="currentPassword"
@@ -153,6 +159,7 @@ export function SettingsAdmin() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   placeholder="أدخل كلمة المرور الحالية"
+                  required
                 />
                 <button
                   type="button"

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useUser, useClerk } from '@clerk/react';
 import {
   BarChart3,
   ChevronDown,
@@ -35,8 +34,15 @@ interface AdminLayoutProps {
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  
+  // Get admin info from localStorage
+  const adminEmail = localStorage.getItem('admin_email') || 'مدير المتجر';
+  
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_email');
+    window.location.href = '/admin/login';
+  };
 
   const adminTabs = [
     { id: 'customers' as const, label: 'العملاء', icon: Users },
@@ -113,12 +119,12 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               <div className="p-3 border-b border-border bg-muted/20">
                 <div className="flex items-center gap-3">
                   <div className="grid size-10 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {(user?.firstName || 'م').slice(0, 1)}
+                    م
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold">{user?.firstName || 'مدير المتجر'}</div>
+                    <div className="text-xs font-bold">مدير المتجر</div>
                     <div className="truncate text-[10px] text-muted-foreground">
-                      {user?.primaryEmailAddress?.emailAddress || 'حساب موثّق'}
+                      {adminEmail}
                     </div>
                   </div>
                 </div>
@@ -174,7 +180,7 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               <div className="border-t border-border p-1">
                 <button
                   type="button"
-                  onClick={() => { signOut({ redirectUrl: '/' }); setMenuOpen(false); }}
+                  onClick={() => { handleLogout(); setMenuOpen(false); }}
                   data-testid="button-admin-signout"
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
                 >

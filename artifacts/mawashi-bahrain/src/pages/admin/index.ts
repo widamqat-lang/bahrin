@@ -7,3 +7,4 @@ export { OrdersAdmin } from './OrdersAdmin';
 export { PresenceAdmin } from './PresenceAdmin';
 export { SettingsAdmin } from './SettingsAdmin';
 export { CustomersAdmin } from './CustomersAdmin';
+export { AdminLogin } from './AdminLogin';

@@ -4,8 +4,13 @@ import { db, ordersTable, productsTable, presenceTable, siteContentTable, visito
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 const router = Router();
+
+// JWT Secret - in production, use environment variable
+const JWT_SECRET = process.env.JWT_SECRET || "mawashi-admin-secret-key-2024";
+const JWT_EXPIRY = "24h";
 
 // Simple password hashing using SHA-256
 function hashPassword(password: string): string {
@@ -14,6 +19,21 @@ function hashPassword(password: string): string {
 
 function verifyPassword(password: string, hash: string): boolean {
   return hashPassword(password) === hash;
+}
+
+// Generate JWT token
+function generateToken(email: string): string {
+  return jwt.sign({ email }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+}
+
+// Verify JWT token
+export function verifyAdminToken(token: string): { email: string } | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { email: string };
+    return decoded;
+  } catch {
+    return null;
+  }
 }
 
 // Get current admin credentials (email only, not password)
@@ -34,28 +54,55 @@ router.get("/admin/credentials", async (_req, res, next) => {
   }
 });
 
-// Verify admin credentials
-router.post("/admin/verify", async (req, res, next) => {
+// Login - Verify credentials and return JWT token
+router.post("/admin/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ error: "البريد وكلمة المرور مطلوبان" });
     }
 
     const admin = await db.select().from(adminTable).where(eq(adminTable.email, email.toLowerCase())).limit(1);
 
     if (admin.length === 0) {
-      return res.status(401).json({ valid: false, error: "Invalid credentials" });
+      return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
     }
 
     const isValid = verifyPassword(password, admin[0].passwordHash);
 
     if (!isValid) {
-      return res.status(401).json({ valid: false, error: "Invalid credentials" });
+      return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
     }
 
-    res.json({ valid: true });
+    // Generate JWT token
+    const token = generateToken(admin[0].email);
+
+    res.json({ 
+      token,
+      email: admin[0].email
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Verify token
+router.post("/admin/verify", async (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ valid: false, error: "Token required" });
+    }
+
+    const decoded = verifyAdminToken(token);
+
+    if (!decoded) {
+      return res.status(401).json({ valid: false, error: "Invalid or expired token" });
+    }
+
+    res.json({ valid: true, email: decoded.email });
   } catch (error) {
     next(error);
   }
