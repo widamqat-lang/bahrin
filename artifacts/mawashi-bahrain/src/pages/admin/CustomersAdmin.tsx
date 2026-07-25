@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useListAdminOrders } from '@workspace/api-client-react';
-import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw } from 'lucide-react';
+import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { LoadingBlock, ErrorBlock } from '../shared';
+import { usePresence } from '@/hooks/usePresence';
 
 type CustomerTab = 'info' | 'summary' | 'payment' | 'verification';
 
@@ -14,10 +15,33 @@ function getPaymentMethodLabel(method: string | undefined) {
   return method === 'cash_on_delivery' ? 'دفع عند الاستلام' : 'دفع الآن';
 }
 
+function getPageDisplayName(path: string): string {
+  const pageNames: Record<string, string> = {
+    '/': 'الصفحة الرئيسية',
+    '/products': 'المنتجات',
+    '/order': 'طلب جديد',
+    '/summary': 'ملخص الطلب',
+    '/payment': 'صفحة الدفع',
+    '/payment-verification': 'تحقق الدفع',
+    '/payment-waiting': 'انتظار الدفع',
+    '/payment-rejected': 'رفض الدفع',
+    '/thank-you': 'شكراً لك',
+    '/about': 'من نحن',
+    '/contact': 'اتصل بنا',
+    '/sign-in': 'تسجيل الدخول',
+    '/sign-up': 'إنشاء حساب',
+    '/admin': 'لوحة التحكم',
+  };
+  return pageNames[path] || path;
+}
+
 export function CustomersAdmin() {
   const { data: orders, isLoading, isError, refetch } = useListAdminOrders();
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
+  
+  // Real-time presence from WebSocket
+  const { presenceClients, isConnected } = usePresence();
 
   const ordersList = Array.isArray(orders) ? orders : [];
 
@@ -38,6 +62,21 @@ export function CustomersAdmin() {
   }, [refetch]);
 
   const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
+  
+  // Match presence clients with orders by customer name
+  const ordersWithPresence = useMemo(() => {
+    return ordersList.map((order) => {
+      const presence = presenceClients.find(
+        (p) => p.customerName === order.customerName || p.sessionId === order.id?.toString()
+      );
+      return {
+        ...order,
+        currentPage: presence?.currentPage || null,
+        isOnline: presence?.isOnline || false,
+        lastSeenAt: presence?.lastSeenAt || null,
+      };
+    });
+  }, [ordersList, presenceClients]);
 
   const InfoSection = () => selectedOrder ? (
     <div className="space-y-4">
@@ -218,6 +257,26 @@ export function CustomersAdmin() {
     <div className="flex h-[calc(100vh-140px)] gap-4">
       {/* Customer List Sidebar */}
       <div className="w-72 flex-shrink-0 overflow-hidden rounded-xl border bg-card">
+        {/* WebSocket Connection Status */}
+        <div className={`flex items-center gap-2 border-b px-4 py-2 text-xs ${
+          isConnected 
+            ? 'bg-green-50 text-green-700 border-green-200' 
+            : 'bg-red-50 text-red-700 border-red-200'
+        }`}>
+          {isConnected ? (
+            <>
+              <Wifi className="h-3 w-3" />
+              <span>متصل - تحديث فوري</span>
+              <span className="ml-auto flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-3 w-3" />
+              <span>غير متصل</span>
+              <span className="ml-auto flex h-2 w-2 rounded-full bg-gray-400"></span>
+            </>
+          )}
+        </div>
         <div className="flex items-center justify-between border-b p-4">
           <div>
             <h2 className="font-bold">العملاء</h2>
@@ -237,7 +296,7 @@ export function CustomersAdmin() {
               لا توجد طلبات حتى الآن
             </div>
           ) : (
-            ordersList.map((order) => (
+            ordersWithPresence.map((order) => (
               <button
                 key={order.id}
                 onClick={() => {
@@ -260,16 +319,39 @@ export function CustomersAdmin() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium">{order.customerName}</p>
-                    <p className={`text-xs ${
+                    <div className={`flex items-center gap-2 text-xs ${
                       selectedCustomerId === order.id
                         ? 'text-primary-foreground/70'
                         : 'text-muted-foreground'
-                    }`}>{order.productName}</p>
+                    }`}>
+                      {order.isOnline ? (
+                        <>
+                          <span className="flex items-center gap-1 text-green-500">
+                            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                            {getPageDisplayName(order.currentPage || '/')}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex items-center gap-1">
+                            <WifiOff className="h-3 w-3" />
+                            {order.currentPage ? getPageDisplayName(order.currentPage) : 'غير متصل'}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <ChevronRight className={`h-4 w-4 ${
-                  selectedCustomerId === order.id ? 'rotate-180' : ''
-                }`} />
+                <div className="flex items-center gap-2">
+                  {order.isOnline ? (
+                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                  ) : (
+                    <span className="flex h-2 w-2 rounded-full bg-gray-400"></span>
+                  )}
+                  <ChevronRight className={`h-4 w-4 ${
+                    selectedCustomerId === order.id ? 'rotate-180' : ''
+                  }`} />
+                </div>
               </button>
             ))
           )}

@@ -5,6 +5,7 @@ import { ClerkProvider, SignIn, SignUp, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import NotFound from '@/pages/not-found';
+import { PresenceProvider } from '@/providers/PresenceProvider';
 
 // Customer Pages
 import {
@@ -140,9 +141,11 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryCache />
-        <WouterRouter base={basePath}>
-          <ClerkRouter />
-        </WouterRouter>
+        <PresenceProvider>
+          <WouterRouter base={basePath}>
+            <ClerkRouter />
+          </WouterRouter>
+        </PresenceProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );
