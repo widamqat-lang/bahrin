@@ -1,10 +1,131 @@
 import { Router } from "express";
 import { asc, desc, eq } from "drizzle-orm";
-import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable } from "@workspace/db";
+import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable, adminTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
+import crypto from "crypto";
 
 const router = Router();
+
+// Simple password hashing using SHA-256
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
+
+// Get current admin credentials (email only, not password)
+router.get("/admin/credentials", async (_req, res, next) => {
+  try {
+    const admin = await db.select().from(adminTable).limit(1);
+    
+    if (admin.length === 0) {
+      return res.status(404).json({ error: "Admin not configured" });
+    }
+
+    res.json({
+      email: admin[0].email,
+      hasPassword: !!admin[0].passwordHash
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Verify admin credentials
+router.post("/admin/verify", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const admin = await db.select().from(adminTable).where(eq(adminTable.email, email.toLowerCase())).limit(1);
+
+    if (admin.length === 0) {
+      return res.status(401).json({ valid: false, error: "Invalid credentials" });
+    }
+
+    const isValid = verifyPassword(password, admin[0].passwordHash);
+
+    if (!isValid) {
+      return res.status(401).json({ valid: false, error: "Invalid credentials" });
+    }
+
+    res.json({ valid: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update admin credentials
+router.put("/admin/credentials", async (req, res, next) => {
+  try {
+    const { email, password, currentPassword } = req.body;
+
+    // Get current admin
+    const currentAdmin = await db.select().from(adminTable).limit(1);
+    
+    if (currentAdmin.length === 0) {
+      return res.status(404).json({ error: "Admin not configured" });
+    }
+
+    // Verify current password
+    if (currentPassword && !verifyPassword(currentPassword, currentAdmin[0].passwordHash)) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    // Update credentials
+    const updates: { email?: string; passwordHash?: string; updatedAt: Date } = {
+      updatedAt: new Date()
+    };
+
+    if (email) {
+      updates.email = email.toLowerCase();
+    }
+
+    if (password) {
+      updates.passwordHash = hashPassword(password);
+    }
+
+    await db.update(adminTable).set(updates).where(eq(adminTable.id, currentAdmin[0].id));
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Initialize admin (first time setup)
+router.post("/admin/init", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // Check if admin already exists
+    const existing = await db.select().from(adminTable).limit(1);
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "Admin already configured" });
+    }
+
+    // Create admin
+    await db.insert(adminTable).values({
+      email: email.toLowerCase(),
+      passwordHash: hashPassword(password)
+    });
+
+    res.status(201).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get card attempts for an order
 router.get("/admin/orders/:orderId/card-attempts", async (req, res, next) => {

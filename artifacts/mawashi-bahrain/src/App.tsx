@@ -33,6 +33,7 @@ import {
   OrdersAdmin,
   PresenceAdmin,
   CustomersAdmin,
+  SettingsAdmin,
 } from './pages/admin';
 
 const queryClient = new QueryClient();
@@ -40,7 +41,7 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
-type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence' | 'customers';
+type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence' | 'customers' | 'settings';
 
 function AdminPage() {
   const [tab, setTab] = useState<AdminTab>('customers');
@@ -53,6 +54,7 @@ function AdminPage() {
       case 'content': return <ContentAdmin />;
       case 'orders': return <OrdersAdmin />;
       case 'presence': return <PresenceAdmin />;
+      case 'settings': return <SettingsAdmin />;
       default: return <CustomersAdmin />;
     }
   };

@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Info,
   Phone,
+  Settings,
 } from 'lucide-react';
 import { BrandMark } from '../shared';
 
@@ -23,7 +24,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence' | 'customers';
+type AdminTab = 'overview' | 'products' | 'content' | 'orders' | 'presence' | 'customers' | 'settings';
 
 interface AdminLayoutProps {
   tab: AdminTab;
@@ -44,6 +45,7 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
     { id: 'content' as const, label: 'محتوى المتجر', icon: FileText },
     { id: 'orders' as const, label: 'الطلبات', icon: ClipboardList },
     { id: 'presence' as const, label: 'الحضور المباشر', icon: UsersRound },
+    { id: 'settings' as const, label: 'الإعدادات', icon: Settings },
   ];
 
   const storeLinks = [
@@ -60,6 +62,7 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
     content: 'محتوى المتجر',
     orders: 'الطلبات',
     presence: 'الحضور المباشر',
+    settings: 'الإعدادات',
   };
 
   // Close menu when clicking outside

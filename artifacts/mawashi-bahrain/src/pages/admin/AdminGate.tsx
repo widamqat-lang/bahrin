@@ -1,15 +1,55 @@
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/react';
-
-// قائمة الإيميلات المسموح لها بالدخول للوحة التحكم
-// أضف إيميلك هنا
-const ADMIN_EMAILS = [
-  'msola8228@gmail.com', // مثال - مدير المتجر
-];
 
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
-  if (!isLoaded) {
+  useEffect(() => {
+    async function checkAdminAccess() {
+      if (!isSignedIn || !user) {
+        setIsAuthorized(false);
+        return;
+      }
+
+      setIsChecking(true);
+      try {
+        // Get user's email from Clerk
+        const userEmail = user.primaryEmailAddress?.emailAddress;
+        
+        if (!userEmail) {
+          setIsAuthorized(false);
+          return;
+        }
+
+        // Verify credentials against database
+        const response = await fetch('/api/admin/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthorized(data.valid);
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch (error) {
+        console.error('Error verifying admin:', error);
+        setIsAuthorized(false);
+      } finally {
+        setIsChecking(false);
+      }
+    }
+
+    if (isSignedIn && user) {
+      checkAdminAccess();
+    }
+  }, [isSignedIn, user]);
+
+  if (!isLoaded || isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -26,13 +66,7 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Check if user's email is in the allowed list
-  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-  const isAdmin = userEmail && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(userEmail);
-
-  if (!isAdmin) {
-    // Redirect non-admin users to the main store
-    window.location.href = '/?error=unauthorized';
+  if (isAuthorized === false) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
         <div className="size-16 rounded-full bg-red-100 flex items-center justify-center">
@@ -50,6 +84,15 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
         >
           العودة للمتجر
         </a>
+      </div>
+    );
+  }
+
+  // Show loading while checking authorization
+  if (isAuthorized === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
