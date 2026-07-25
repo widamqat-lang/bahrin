@@ -73,7 +73,8 @@ export function SummaryPage() {
       { data: payload }, 
       { 
         onSuccess: order => { 
-          sessionStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order })); 
+          localStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order })); 
+          window.dispatchEvent(new Event('mawashi-data-update'));
           if (paymentType === 'cash') {
             setLocation('/thank-you');
           } else {

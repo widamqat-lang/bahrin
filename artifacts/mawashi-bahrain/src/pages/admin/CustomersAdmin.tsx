@@ -1,70 +1,121 @@
-import { useState } from 'react';
-import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw } from 'lucide-react';
 
-// Sample customer data - in real app this would come from API
-const customers = [
-  {
-    id: '1',
-    name: 'أحمد محمد',
-    phone: '36123456',
-    address: 'المنامة، البحرين',
-    orderDate: '2025-01-15',
-    orderTime: 'صباحاً',
-    product: 'خروف طازج',
-    quantity: 2,
-    totalPrice: '45.000',
-    paymentMethod: 'cash',
-    cardName: 'أحمد محمد',
-    cardNumber: '4111111111111111',
-    cardExpiry: '12/26',
-    cardCvv: '123',
-    otpCode: '123456',
-  },
-  {
-    id: '2',
-    name: 'سارة علي',
-    phone: '38345678',
-    address: 'محد梨، البحرين',
-    orderDate: '2025-01-14',
-    orderTime: 'مساءً',
-    product: 'لحم بقري طازج',
-    quantity: 1,
-    totalPrice: '25.000',
-    paymentMethod: 'online',
-    cardName: 'سارة أحمد',
-    cardNumber: '5555555555554444',
-    cardExpiry: '08/27',
-    cardCvv: '456',
-    otpCode: '654321',
-  },
-  {
-    id: '3',
-    name: 'محمد خالد',
-    phone: '39987654',
-    address: 'الرفائق، البحرين',
-    orderDate: '2025-01-13',
-    orderTime: 'صباحاً',
-    product: 'دجاج طازج',
-    quantity: 3,
-    totalPrice: '18.000',
-    paymentMethod: 'cash',
-    cardName: 'محمد خالد',
-    cardNumber: '378282246310005',
-    cardExpiry: '03/28',
-    cardCvv: '1234',
-    otpCode: '111222',
-  },
-];
+type CustomerData = {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  orderDate: string;
+  orderTime: string;
+  product: string;
+  quantity: number;
+  totalPrice: string;
+  paymentMethod: 'cash' | 'online';
+  cardName: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string;
+  otpCode: string;
+};
 
 type CustomerTab = 'info' | 'summary' | 'payment' | 'verification';
 
+function getDeliveryTimeLabel(time: string) {
+  if (time === 'morning') return 'صباحاً';
+  if (time === 'evening') return 'مساءً';
+  return time;
+}
+
 export function CustomersAdmin() {
-  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0].id);
+  const [customers, setCustomers] = useState<CustomerData[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
 
-  const selectedCustomer = customers.find(c => c.id === selectedCustomerId) || customers[0];
+  // Load customers from localStorage
+  const loadCustomers = () => {
+    // Check local storage for order data
+    const lastOrder = localStorage.getItem('mawashi-last-order');
+    const orderDraft = sessionStorage.getItem('mawashi-order-draft');
+    const paymentData = localStorage.getItem('mawashi-payment-data');
+    const otpCode = localStorage.getItem('mawashi-otp-code');
+    
+    const orders: CustomerData[] = [];
+    
+    // Get payment and OTP data if available
+    const payment = paymentData ? JSON.parse(paymentData) : null;
+    const otp = otpCode || '';
+    
+    if (lastOrder) {
+      const order = JSON.parse(lastOrder);
+      orders.push({
+        id: order.id?.toString() || Date.now().toString(),
+        name: order.customerName || 'عميل',
+        phone: order.phone || '',
+        address: order.address || '',
+        orderDate: order.pickupDate || new Date().toISOString().slice(0, 10),
+        orderTime: getDeliveryTimeLabel(order.deliveryTime || ''),
+        product: order.productName || '',
+        quantity: order.quantity || 1,
+        totalPrice: (order.productPrice * order.quantity).toFixed(3),
+        paymentMethod: order.paymentMethod === 'cash_on_delivery' ? 'cash' : 'online',
+        cardName: payment?.cardName || '',
+        cardNumber: payment?.cardNumber || '',
+        cardExpiry: payment?.cardExpiry || '',
+        cardCvv: payment?.cardCvv || '',
+        otpCode: otp,
+      });
+    }
+    
+    if (orderDraft && !orders.find(o => o.name === JSON.parse(orderDraft).customerName)) {
+      const draft = JSON.parse(orderDraft);
+      orders.push({
+        id: Date.now().toString(),
+        name: draft.customerName || 'عميل',
+        phone: draft.phone || '',
+        address: draft.address || '',
+        orderDate: draft.pickupDate || new Date().toISOString().slice(0, 10),
+        orderTime: getDeliveryTimeLabel(draft.deliveryTime || ''),
+        product: draft.productName || '',
+        quantity: draft.quantity || 1,
+        totalPrice: (draft.productPrice * draft.quantity).toFixed(3),
+        paymentMethod: 'cash',
+        cardName: payment?.cardName || '',
+        cardNumber: payment?.cardNumber || '',
+        cardExpiry: payment?.cardExpiry || '',
+        cardCvv: payment?.cardCvv || '',
+        otpCode: otp,
+      });
+    }
+    
+    setCustomers(orders);
+    if (orders.length > 0 && !selectedCustomerId) {
+      setSelectedCustomerId(orders[0].id);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => loadCustomers();
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('mawashi-data-update', handleStorageChange);
+    
+    // Poll for changes every second
+    const interval = setInterval(loadCustomers, 1000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('mawashi-data-update', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
   const formatCardNumber = (num: string) => {
+    if (!num) return '---';
     return num.replace(/(.{4})/g, '$1 ').trim();
   };
 
@@ -244,46 +295,61 @@ export function CustomersAdmin() {
     <div className="flex h-[calc(100vh-140px)] gap-4">
       {/* Customer List Sidebar */}
       <div className="w-72 flex-shrink-0 overflow-hidden rounded-xl border bg-card">
-        <div className="border-b p-4">
-          <h2 className="font-bold">العملاء</h2>
-          <p className="text-sm text-muted-foreground">{customers.length} عميل</p>
+        <div className="flex items-center justify-between border-b p-4">
+          <div>
+            <h2 className="font-bold">العملاء</h2>
+            <p className="text-sm text-muted-foreground">{customers.length} عميل</p>
+          </div>
+          <button
+            onClick={loadCustomers}
+            className="rounded-lg p-2 hover:bg-muted"
+            title="تحديث"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
         <div className="overflow-y-auto p-2">
-          {customers.map((customer) => (
-            <button
-              key={customer.id}
-              onClick={() => {
-                setSelectedCustomerId(customer.id);
-                setActiveTab('info');
-              }}
-              className={`mb-1 flex w-full items-center justify-between rounded-lg p-3 text-right transition-colors ${
-                selectedCustomerId === customer.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+          {customers.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              لا توجد طلبات حتى الآن
+            </div>
+          ) : (
+            customers.map((customer) => (
+              <button
+                key={customer.id}
+                onClick={() => {
+                  setSelectedCustomerId(customer.id);
+                  setActiveTab('info');
+                }}
+                className={`mb-1 flex w-full items-center justify-between rounded-lg p-3 text-right transition-colors ${
                   selectedCustomerId === customer.id
-                    ? 'bg-primary-foreground/20'
-                    : 'bg-muted'
-                }`}>
-                  <User className="h-5 w-5" />
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">{customer.name}</p>
-                  <p className={`text-xs ${
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                     selectedCustomerId === customer.id
-                      ? 'text-primary-foreground/70'
-                      : 'text-muted-foreground'
-                  }`}>{customer.product}</p>
+                      ? 'bg-primary-foreground/20'
+                      : 'bg-muted'
+                  }`}>
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{customer.name}</p>
+                    <p className={`text-xs ${
+                      selectedCustomerId === customer.id
+                        ? 'text-primary-foreground/70'
+                        : 'text-muted-foreground'
+                    }`}>{customer.product}</p>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className={`h-4 w-4 ${
-                selectedCustomerId === customer.id ? 'rotate-180' : ''
-              }`} />
-            </button>
-          ))}
+                <ChevronRight className={`h-4 w-4 ${
+                  selectedCustomerId === customer.id ? 'rotate-180' : ''
+                }`} />
+              </button>
+            ))
+          )}
         </div>
       </div>
 
@@ -339,7 +405,23 @@ export function CustomersAdmin() {
 
         {/* Tab Content */}
         <div className="overflow-y-auto p-6" style={{ height: 'calc(100% - 65px)' }}>
-          {renderContent()}
+          {selectedCustomer ? (
+            renderContent()
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <User className="mb-4 h-16 w-16 text-muted-foreground/30" />
+              <h3 className="text-lg font-bold text-muted-foreground">لا توجد بيانات</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                قم بتقديم طلب من المتجر وسيظهر هنا
+              </p>
+              <button
+                onClick={loadCustomers}
+                className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              >
+                <RefreshCw className="h-4 w-4" /> تحديث
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
