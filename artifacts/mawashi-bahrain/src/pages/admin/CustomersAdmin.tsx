@@ -206,11 +206,6 @@ export function CustomersAdmin() {
 
   const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
   
-  // Find the customer group for selected order
-  const selectedCustomerGroup = groupedCustomers.find(
-    g => g.orders.some(o => o.id === selectedCustomerId)
-  );
-  
   // Match presence clients with orders by orderId (primary) or customerName (fallback)
   const ordersWithPresence = useMemo(() => {
     return ordersList.map((order) => {
@@ -244,11 +239,11 @@ export function CustomersAdmin() {
           phone: order.phone,
           orders: [],
           orderCount: 0,
-          latestOrder: null,
-          latestOrderId: null,
-          currentPage: null,
+          latestOrder: null as typeof ordersList[0] | null,
+          latestOrderId: null as number | null,
+          currentPage: null as string | null,
           isOnline: false,
-          lastSeenAt: null,
+          lastSeenAt: null as string | null,
         };
       }
       
@@ -294,6 +289,11 @@ export function CustomersAdmin() {
       return new Date(b.latestOrder.createdAt).getTime() - new Date(a.latestOrder.createdAt).getTime();
     });
   }, [ordersList, presenceClients]);
+  
+  // Find the customer group for selected order
+  const selectedCustomerGroup = groupedCustomers.find(
+    g => g.orders.some(o => o.id === selectedCustomerId)
+  );
 
   const InfoSection = () => selectedOrder ? (
     <div className="space-y-4">
