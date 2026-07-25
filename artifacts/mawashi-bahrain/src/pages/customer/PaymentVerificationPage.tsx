@@ -1,17 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation, useSearchParams } from 'wouter';
+import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import { Shell } from '../shared';
 
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
-  const [searchParams] = useSearchParams();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
+  const [showInvalidError, setShowInvalidError] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const fullCode = code.join('');
-  const showError = searchParams.error === 'invalid';
+
+  // Check URL params on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'invalid') {
+      setShowInvalidError(true);
+      // Clear URL params after reading
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -20,6 +29,7 @@ export function PaymentVerificationPage() {
     newCode[index] = value.slice(-1);
     setCode(newCode);
     setError('');
+    setShowInvalidError(false);
 
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
@@ -40,6 +50,7 @@ export function PaymentVerificationPage() {
       if (i < 6) newCode[i] = char;
     });
     setCode(newCode);
+    setShowInvalidError(false);
     
     const lastFilledIndex = Math.min(pastedData.length, 6) - 1;
     if (lastFilledIndex >= 0) {
@@ -50,6 +61,7 @@ export function PaymentVerificationPage() {
   const handleResend = () => {
     setCode(['', '', '', '', '', '']);
     setError('');
+    setShowInvalidError(false);
     inputRefs.current[0]?.focus();
   };
 
@@ -106,7 +118,7 @@ export function PaymentVerificationPage() {
           </div>
 
           {/* Error Message */}
-          {(error || showError) && (
+          {(error || showInvalidError) && (
             <p className="text-center text-base text-red-500">
               {error || 'رمز التحقق غير صحيح أو منتهي، يرجى التحقق مرة أخرى أو انتظار رمز جديد'}
             </p>
