@@ -148,6 +148,12 @@ export function usePresence(options: UsePresenceOptions = {}) {
             window.dispatchEvent(new CustomEvent("mawashi-new-order", { detail: message.order }));
             break;
 
+          case "card_attempt":
+            console.log("[Presence] Card attempt received:", message.attempt);
+            // Dispatch custom event for admin pages to refetch card attempts
+            window.dispatchEvent(new CustomEvent("mawashi-card-attempt", { detail: message.attempt }));
+            break;
+
           case "pong":
             break;
         }

@@ -100,13 +100,31 @@ export function CustomersAdmin() {
     };
 
     fetchCardAttempts();
+  }, [selectedCustomerId]);
 
-    // Also listen for card attempts updates
-    const handleCardAttempt = () => {
-      fetchCardAttempts();
+  // Listen for real-time card attempt updates via WebSocket - separate effect to trigger immediately
+  useEffect(() => {
+    const handleCardAttempt = (event: CustomEvent) => {
+      const attempt = event.detail;
+      console.log("[Admin] Card attempt event received:", attempt);
+      
+      // If this attempt is for the currently selected order, refetch immediately
+      if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
+        // Directly update the card attempts state for instant display
+        setCardAttempts(prev => {
+          // Check if this attempt already exists
+          const exists = prev.some(a => a.id === attempt.id);
+          if (!exists) {
+            console.log("[Admin] Adding new card attempt to state:", attempt);
+            return [{ ...attempt, cardCvv: null }, ...prev];
+          }
+          return prev;
+        });
+      }
     };
-    window.addEventListener('mawashi-card-attempt', handleCardAttempt);
-    return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt);
+    
+    window.addEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
+    return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
   }, [selectedCustomerId]);
   
   // Real-time presence from WebSocket
