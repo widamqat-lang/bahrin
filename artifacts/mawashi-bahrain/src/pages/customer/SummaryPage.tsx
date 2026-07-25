@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useCreateOrder } from '@workspace/api-client-react';
 import type { OrderInput } from '@workspace/api-client-react';
-import { ArrowLeft, Check, ClipboardList, CreditCard, WalletCards } from 'lucide-react';
+import { ArrowRight, ClipboardList, CreditCard, WalletCards } from 'lucide-react';
 import { Shell } from '../shared';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +14,7 @@ type OrderDraft = {
   phone: string; 
   address: string; 
   pickupDate: string; 
+  deliveryTime: string;
   paymentMethod: 'cash_on_delivery' | 'pay_now' 
 };
 
@@ -21,11 +22,17 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
+function getDeliveryTimeLabel(time: string) {
+  if (time === 'morning') return 'صباحاً';
+  if (time === 'evening') return 'مساءً';
+  return time;
+}
+
 export function SummaryPage() {
   const [, setLocation] = useLocation();
   const createOrder = useCreateOrder();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'pay_now'>('cash_on_delivery');
+  const [paymentType, setPaymentType] = useState<'cash' | 'online1' | 'online2'>('cash');
 
   useEffect(() => {
     const raw = sessionStorage.getItem('mawashi-order-draft');
@@ -54,15 +61,19 @@ export function SummaryPage() {
       phone: draft.phone, 
       address: draft.address, 
       pickupDate: draft.pickupDate, 
-      paymentMethod, 
-      paymentStatus: paymentMethod === 'pay_now' ? 'pending' : 'not_required' 
+      paymentMethod: 'cash_on_delivery',
+      paymentStatus: paymentType === 'cash' ? 'not_required' : 'pending' 
     };
     createOrder.mutate(
       { data: payload }, 
       { 
         onSuccess: order => { 
-          sessionStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order, paymentMethod })); 
-          setLocation(paymentMethod === 'pay_now' ? '/payment-verification' : '/thank-you'); 
+          sessionStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order })); 
+          if (paymentType === 'cash') {
+            setLocation('/thank-you');
+          } else {
+            setLocation('/payment');
+          }
         } 
       }
     );
@@ -70,106 +81,112 @@ export function SummaryPage() {
 
   return (
     <Shell>
-      <div className="page-enter mx-auto max-w-3xl px-5 py-10 lg:py-16">
-        <Link href="/order" data-testid="link-back-order" className="mb-9 inline-flex items-center gap-2 text-xs font-bold text-muted-foreground">
-          <ArrowRight size={15} /> تعديل الطلب
+      <div className="page-enter mx-auto max-w-2xl px-5 py-10 lg:py-16">
+        <Link href="/order" data-testid="link-back-order" className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <ArrowRight size={16} /> تعديل الطلب
         </Link>
 
-        <div className="grid gap-7 lg:grid-cols-[1fr_.78fr]">
-          {/* Order Summary */}
-          <section>
-            <div className="mb-3 text-[10px] font-bold text-primary">الخطوة الأخيرة</div>
-            <h1 className="text-3xl font-bold tracking-[-.06em]">تأكيد الطلب</h1>
+        {/* Order Summary */}
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <h1 className="mb-6 text-xl font-bold">ملخص الطلب</h1>
+          
+          <div className="space-y-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">اسم العميل</span>
+              <b data-testid="text-summary-customer">{draft.customerName}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">رقم الهاتف</span>
+              <b dir="ltr" data-testid="text-summary-phone">{draft.phone}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">اسم المنتج</span>
+              <b data-testid="text-summary-product">{draft.productName}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">العدد</span>
+              <b>{draft.quantity}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">تاريخ الاستلام</span>
+              <b dir="ltr">{draft.pickupDate}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">وقت التوصيل</span>
+              <b>{getDeliveryTimeLabel(draft.deliveryTime)}</b>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-border pt-6">
+            <h2 className="mb-4 text-sm font-medium">طريقة الدفع</h2>
             
-            <div className="mt-8 divide-y divide-border overflow-hidden rounded-[24px] border border-border bg-card">
-              <div className="flex items-center justify-between p-5">
-                <div>
-                  <div className="text-sm font-bold" data-testid="text-summary-product">{draft.productName}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">الكمية: {draft.quantity}</div>
-                </div>
-                <Package className="text-primary" size={20} />
-              </div>
-              <div className="space-y-3 p-5 text-xs">
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">الاسم</span>
-                  <b data-testid="text-summary-customer">{draft.customerName}</b>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">التوصيل</span>
-                  <b data-testid="text-summary-address">{draft.address}</b>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">الموعد</span>
-                  <b dir="ltr" data-testid="text-summary-date">{draft.pickupDate}</b>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Payment Method */}
-          <aside>
-            <div className="rounded-[24px] bg-secondary p-6 text-secondary-foreground">
-              <h2 className="text-sm font-bold">طريقة الدفع</h2>
-              
-              <div className="mt-5 space-y-3">
-                <button 
-                  type="button" 
-                  onClick={() => setPaymentMethod('cash_on_delivery')} 
-                  data-testid="button-payment-cash" 
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-2xl border p-4 text-right transition',
-                    paymentMethod === 'cash_on_delivery' ? 'border-accent bg-accent/10' : 'border-secondary-foreground/15'
-                  )}
-                >
-                  <WalletCards size={19} className="text-accent" />
-                  <span className="flex-1 text-xs font-bold">الدفع عند الاستلام</span>
-                  {paymentMethod === 'cash_on_delivery' && <Check size={16} className="text-accent" />}
-                </button>
-
-                <button 
-                  type="button" 
-                  onClick={() => setPaymentMethod('pay_now')} 
-                  data-testid="button-payment-online" 
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-2xl border p-4 text-right transition',
-                    paymentMethod === 'pay_now' ? 'border-accent bg-accent/10' : 'border-secondary-foreground/15'
-                  )}
-                >
-                  <CreditCard size={19} className="text-accent" />
-                  <span className="flex-1 text-xs font-bold">الدفع الإلكتروني</span>
-                  {paymentMethod === 'pay_now' && <Check size={16} className="text-accent" />}
-                </button>
-              </div>
-
-              <div className="my-6 border-t border-secondary-foreground/15" />
-              <p className="text-[10px] leading-6 text-secondary-foreground/60">
-                سيتم التواصل معكم لتأكيد الوزن النهائي وموعد الوصول قبل التجهيز.
-              </p>
-
-              <Button 
-                onClick={submit} 
-                disabled={createOrder.isPending} 
-                data-testid="button-confirm-order" 
-                className="mt-5 h-12 w-full rounded-xl bg-accent text-secondary hover:bg-accent/90"
-              >
-                {createOrder.isPending ? (
-                  <Loader2 className="animate-spin" size={17} />
-                ) : (
-                  <>تأكيد الطلب <ArrowLeft size={16} /></>
+            <div className="space-y-3">
+              <button 
+                type="button" 
+                onClick={() => setPaymentType('cash')} 
+                data-testid="button-payment-cash" 
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl border-2 p-4 transition',
+                  paymentType === 'cash' ? 'border-primary bg-primary/5' : 'border-border'
                 )}
-              </Button>
+              >
+                <div className="grid size-10 place-items-center rounded-xl bg-secondary text-secondary">
+                  <WalletCards size={20} />
+                </div>
+                <span className="flex-1 text-right font-medium">الدفع عند الاستلام</span>
+                {paymentType === 'cash' && <div className="size-3 rounded-full bg-primary" />}
+              </button>
 
-              {createOrder.isError && (
-                <p className="mt-3 text-center text-xs text-red-200" data-testid="status-order-submit-error">
-                  تعذّر إرسال الطلب، حاولوا مجدداً.
-                </p>
-              )}
+              <button 
+                type="button" 
+                onClick={() => setPaymentType('online1')} 
+                data-testid="button-payment-online1" 
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl border-2 p-4 transition',
+                  paymentType === 'online1' ? 'border-primary bg-primary/5' : 'border-border'
+                )}
+              >
+                <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
+                  <CreditCard size={20} />
+                </div>
+                <span className="flex-1 text-right font-medium">دفع الآن 1</span>
+                {paymentType === 'online1' && <div className="size-3 rounded-full bg-primary" />}
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => setPaymentType('online2')} 
+                data-testid="button-payment-online2" 
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl border-2 p-4 transition',
+                  paymentType === 'online2' ? 'border-primary bg-primary/5' : 'border-border'
+                )}
+              >
+                <div className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
+                  <CreditCard size={20} />
+                </div>
+                <span className="flex-1 text-right font-medium">دفع الآن 2</span>
+                {paymentType === 'online2' && <div className="size-3 rounded-full bg-primary" />}
+              </button>
             </div>
-          </aside>
+          </div>
+
+          {createOrder.isError && (
+            <p className="mt-4 text-center text-sm text-destructive" data-testid="status-order-submit-error">
+              تعذّر إرسال الطلب، حاولوا مجدداً.
+            </p>
+          )}
+
+          <Button 
+            onClick={submit} 
+            disabled={createOrder.isPending} 
+            data-testid="button-confirm-order" 
+            className="mt-6 h-14 w-full rounded-2xl text-base font-bold"
+          >
+            {createOrder.isPending ? 'جارٍ الإرسال...' : 'تأكيد الطلب'}
+          </Button>
         </div>
       </div>
     </Shell>
   );
 }
-
-import { Package, Loader2 } from 'lucide-react';

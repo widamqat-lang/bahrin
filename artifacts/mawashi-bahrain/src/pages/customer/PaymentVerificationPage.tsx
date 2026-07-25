@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Check, Loader2, LockKeyhole } from 'lucide-react';
+import { ArrowRight, Check, LockKeyhole } from 'lucide-react';
 import { Shell } from '../shared';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,68 +8,82 @@ import { Button } from '@/components/ui/button';
 export function PaymentVerificationPage() {
   const [, setLocation] = useLocation();
   const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState('');
 
   const verify = () => {
-    if (code.trim().length >= 4) {
-      setSent(true);
-      setTimeout(() => setLocation('/thank-you'), 700);
+    if (code.trim().length < 4) {
+      setError('يرجى إدخال رمز التحقق');
+      return;
+    }
+    // For demo: any code except "0000" succeeds
+    if (code === '0000') {
+      setLocation('/payment-rejected');
+    } else {
+      setVerified(true);
+      setTimeout(() => setLocation('/thank-you'), 1000);
     }
   };
 
-  return (
-    <Shell showSidebar={false}>
-      <div className="page-enter mx-auto flex min-h-[calc(100dvh-76px)] max-w-2xl items-center px-5 py-12">
-        <div className="w-full rounded-[32px] border border-border bg-card p-7 text-center shadow-card sm:p-12">
-          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-accent/25 text-primary">
-            <LockKeyhole size={27} />
+  if (verified) {
+    return (
+      <Shell>
+        <div className="page-enter mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-5 py-10 text-center">
+          <div className="mb-6 grid size-16 place-items-center rounded-full bg-secondary text-secondary-foreground">
+            <Check size={32} />
           </div>
-          
-          <div className="mt-7 text-[10px] font-bold text-primary">تحقق آمن للدفع</div>
-          <h1 className="mt-3 text-2xl font-bold tracking-[-.05em] sm:text-3xl" data-testid="text-payment-title">
-            أدخل رمز التحقق
-          </h1>
-          <p className="mx-auto mt-3 max-w-sm text-xs leading-7 text-muted-foreground">
-            أرسلنا رمزاً مؤقتاً إلى رقم التواصل المسجل. هذه شاشة تجريبية جاهزة للربط مع بوابة الدفع.
-          </p>
+          <h1 className="text-xl font-bold">تم التحقق بنجاح</h1>
+          <p className="mt-2 text-muted-foreground">جارٍ توجيهك...</p>
+        </div>
+      </Shell>
+    );
+  }
 
-          <div className="mx-auto mt-8 max-w-xs">
+  return (
+    <Shell>
+      <div className="page-enter mx-auto max-w-md px-5 py-10 lg:py-16">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
+              <LockKeyhole size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">التحقق من الدفع</h1>
+              <p className="text-xs text-muted-foreground">أدخل رمز التحقق المرسل لهاتفك</p>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="otp-code" className="text-sm font-medium">رمز التحقق</Label>
             <Input 
+              id="otp-code"
               value={code} 
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} 
               inputMode="numeric" 
-              placeholder="٠ ٠ ٠ ٠ ٠ ٠" 
+              placeholder="000000" 
               dir="ltr" 
-              data-testid="input-payment-code" 
-              className="h-14 rounded-xl text-center text-xl tracking-[.5em]" 
+              className="mt-1.5 h-14 rounded-xl text-center text-2xl tracking-[.5em]" 
             />
           </div>
 
-          {sent ? (
-            <div className="mt-5 flex items-center justify-center gap-2 text-xs font-bold text-secondary" data-testid="status-payment-verified">
-              <Check size={16} /> تم التحقق، نجهّز تأكيدكم
-            </div>
-          ) : (
-            <>
-              <Button 
-                onClick={verify} 
-                data-testid="button-verify-payment" 
-                className="mt-6 h-12 w-full max-w-xs rounded-xl"
-              >
-                تأكيد الرمز <ArrowLeft size={15} />
-              </Button>
-              <button 
-                type="button" 
-                onClick={() => setCode('123456')} 
-                data-testid="button-fill-demo-code" 
-                className="mt-5 text-[10px] font-semibold text-muted-foreground underline underline-offset-4"
-              >
-                استخدام رمز تجريبي
-              </button>
-            </>
+          {error && (
+            <p className="mt-4 text-sm text-destructive">{error}</p>
           )}
+
+          <Button 
+            onClick={verify} 
+            className="mt-6 h-14 w-full rounded-2xl text-base font-bold"
+          >
+            تحقق <ArrowRight size={20} className="mr-2" />
+          </Button>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            أدخل "000000" لفشل العملية تجريبياً
+          </p>
         </div>
       </div>
     </Shell>
   );
 }
+
+import { Label } from '@/components/ui/label';
