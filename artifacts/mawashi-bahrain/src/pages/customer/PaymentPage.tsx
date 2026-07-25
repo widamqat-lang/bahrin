@@ -136,14 +136,14 @@ export function PaymentPage() {
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold text-[#8B8E98]">تاريخ الانتهاء / CVV</label>
-              <div className="grid grid-cols-[4fr_2fr] gap-4">
+              <div className="flex gap-3">
                 <input
                   type="text"
                   value={expiry}
                   onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                   placeholder="MM/YY"
                   dir="ltr"
-                  className="h-10 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                  className="h-10 w-28 flex-shrink-0 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 text-center text-sm outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
                 />
                 <input
                   type="text"
@@ -151,7 +151,7 @@ export function PaymentPage() {
                   onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="CVV"
                   dir="ltr"
-                  className="h-10 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                  className="h-10 w-16 flex-shrink-0 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-3 text-center text-sm outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
                 />
               </div>
             </div>
