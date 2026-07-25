@@ -52,7 +52,7 @@ export function AboutPage() {
               <Truck size={24} />
             </div>
             <h3 className="mt-4 font-bold">توصيل سريع</h3>
-            <p className="mt-2 text-xs text-muted-foreground">نوصل طلبكم مبرداً إلى بابكم بنفس اليوم.</p>
+            <p className="mt-2 text-xs text-muted-foreground">نوصل طلبكم مجانياً إلى بابكم بنفس اليوم.</p>
           </div>
         </div>
       </div>

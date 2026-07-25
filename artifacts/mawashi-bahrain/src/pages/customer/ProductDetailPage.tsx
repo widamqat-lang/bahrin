@@ -89,7 +89,7 @@ export function ProductDetailPage() {
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-muted p-3">
                 <Truck size={18} className="text-primary" />
-                <span className="text-[10px] font-medium">توصيل مبرد</span>
+                <span className="text-[10px] font-medium">توصيل مجاني</span>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-muted p-3">
                 <ShieldCheck size={18} className="text-primary" />

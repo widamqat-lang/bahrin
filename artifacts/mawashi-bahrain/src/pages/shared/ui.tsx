@@ -31,7 +31,7 @@ export function Shell({ children, showSidebar = false }: { children: React.React
       <div className="bg-secondary text-secondary-foreground">
         <div className="mx-auto flex max-w-[1480px] items-center justify-center gap-4 px-4 py-2 text-[10px] font-semibold md:gap-8 md:text-xs lg:px-10">
           <span className="flex items-center gap-1.5"><BadgeCheck size={14} className="text-accent" /> ذبح حلال معتمد</span>
-          <span className="flex items-center gap-1.5"><Truck size={14} className="text-accent" /> توصيل مبرد</span>
+          <span className="flex items-center gap-1.5"><Truck size={14} className="text-accent" /> توصيل مجاني</span>
           <span className="hidden md:flex items-center gap-1.5"><ShieldCheck size={14} className="text-accent" /> ضمان الجودة</span>
         </div>
       </div>
