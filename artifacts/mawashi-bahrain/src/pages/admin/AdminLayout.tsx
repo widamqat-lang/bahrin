@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useUser, useClerk } from '@clerk/react';
 import {
   BarChart3,
   ChevronLeft,
-  ChevronDown,
   ExternalLink,
   FileText,
   ClipboardList,
@@ -18,7 +17,6 @@ import {
   ShoppingBag,
   Info,
   Phone,
-  ListOrdered,
 } from 'lucide-react';
 import { BrandMark } from '../shared';
 
@@ -36,8 +34,6 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const [mobileNav, setMobileNav] = useState(false);
-  const [storeMenuOpen, setStoreMenuOpen] = useState(false);
-  const storeMenuRef = useRef<HTMLDivElement>(null);
   const { user } = useUser();
   const { signOut } = useClerk();
 
@@ -56,17 +52,6 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
     { href: '/about', label: 'من نحن', icon: Info },
     { href: '/contact', label: 'اتصل بنا', icon: Phone },
   ];
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (storeMenuRef.current && !storeMenuRef.current.contains(event.target as Node)) {
-        setStoreMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const tabTitles: Record<AdminTab, string> = {
     customers: 'العملاء',
@@ -118,6 +103,26 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
               {tab === id && <ChevronLeft className="mr-auto" size={14} />}
             </button>
           ))}
+
+          {/* Store Links Section */}
+          <div className="pt-4 mt-4 border-t border-sidebar-border">
+            <div className="mb-2 px-3 text-[9px] font-bold uppercase tracking-wider text-sidebar-foreground/45">
+              المتجر
+            </div>
+            {storeLinks.map(({ href, label, icon: Icon }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-right text-xs font-medium transition text-sidebar-foreground/65 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+              >
+                <Icon size={15} />
+                {label}
+                <ExternalLink size={10} className="mr-auto opacity-40" />
+              </a>
+            ))}
+          </div>
         </nav>
 
         <div className="absolute inset-x-5 bottom-6 border-t border-sidebar-border pt-5">
@@ -163,45 +168,15 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
             </div>
           </div>
 
-          {/* Store Menu Dropdown */}
-          <div className="relative" ref={storeMenuRef}>
-            <button
-              type="button"
-              onClick={() => setStoreMenuOpen(!storeMenuOpen)}
-              data-testid="button-admin-store-menu"
-              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold transition-colors hover:bg-muted"
-            >
-              <ExternalLink size={14} />
-              <span>قائمة</span>
-              <ChevronDown 
-                size={12} 
-                className={`transition-transform ${storeMenuOpen ? 'rotate-180' : ''}`} 
-              />
-            </button>
-
-            {/* Dropdown Menu */}
-            {storeMenuOpen && (
-              <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
-                <div className="p-2 border-b border-border">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">المتجر</p>
-                </div>
-                <nav className="p-1">
-                  {storeLinks.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      target="_blank"
-                      onClick={() => setStoreMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-            )}
-          </div>
+          {/* Store Menu Button - Links to homepage */}
+          <Link 
+            href="/" 
+            target="_blank" 
+            data-testid="link-admin-view-store" 
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[10px] font-bold"
+          >
+            <ExternalLink size={14} /> المتجر
+          </Link>
         </header>
 
         <div className="p-5 md:p-9">{children}</div>
