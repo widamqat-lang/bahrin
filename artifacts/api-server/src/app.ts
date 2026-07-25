@@ -1,8 +1,9 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import path from "path";
 
 const app: Express = express();
 
@@ -30,5 +31,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Serve static files from frontend build
+const frontendPath = path.join(__dirname, "../../mawashi-bahrain/dist/public");
+app.use(express.static(frontendPath));
+
+// SPA fallback - serve index.html for all non-API routes
+app.get("*", (_req: Request, res: Response) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
 export default app;
