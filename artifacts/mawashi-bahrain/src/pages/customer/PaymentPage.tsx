@@ -110,6 +110,9 @@ export function PaymentPage() {
           </div>
 
           {/* Separator */}
+          {error && (
+            <p className="mb-3 text-center text-sm font-medium text-red-500">{error}</p>
+          )}
           <div className="mb-5 grid grid-cols-[1fr_2fr_1fr] items-center gap-2.5 text-[11px] font-semibold text-[#8B8E98]">
             <hr className="h-px border-0 bg-[#e8e8e8]"/>
             <p className="text-center">أو ادفع بالبطاقة</p>
@@ -169,10 +172,6 @@ export function PaymentPage() {
               </div>
             </div>
           </div>
-
-          {error && (
-            <p className="mb-4 text-sm font-medium text-red-500">{error}</p>
-          )}
 
           {/* Checkout Button */}
           <button
