@@ -1,7 +1,64 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { Shell } from '../shared';
+
+type CardType = 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
+
+// Luhn Algorithm - Validate card number
+function luhnCheck(cardNumber: string): boolean {
+  const digits = cardNumber.replace(/\s/g, '').split('').reverse().map(Number);
+  let sum = 0;
+  
+  for (let i = 0; i < digits.length; i++) {
+    let digit = digits[i];
+    if (i % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  
+  return sum % 10 === 0;
+}
+
+// Detect card type
+function detectCardType(cardNumber: string): CardType {
+  const num = cardNumber.replace(/\s/g, '');
+  
+  if (/^4/.test(num)) return 'visa';
+  if (/^5[1-5]/.test(num)) return 'mastercard';
+  if (/^3[47]/.test(num)) return 'amex';
+  if (/^6(?:011|5|4|22)/.test(num)) return 'discover';
+  
+  return 'unknown';
+}
+
+// Validate expiry date
+function validateExpiry(expiry: string): { valid: boolean; error?: string } {
+  const match = expiry.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) return { valid: false, error: 'صيغة غير صحيحة' };
+  
+  const month = parseInt(match[1]);
+  const year = parseInt(match[2]) + 2000;
+  
+  if (month < 1 || month > 12) return { valid: false, error: 'الشهر غير صحيح' };
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  
+  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    return { valid: false, error: 'البطاقة منتهية' };
+  }
+  
+  return { valid: true };
+}
+
+// Get required CVV length based on card type
+function getRequiredCvvLength(cardType: CardType): number {
+  return cardType === 'amex' ? 4 : 3;
+}
 
 export function PaymentPage() {
   const [, setLocation] = useLocation();
@@ -9,47 +66,86 @@ export function PaymentPage() {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
-  const [error, setError] = useState('');
+  const [touched, setTouched] = useState({
+    cardName: false,
+    cardNumber: false,
+    expiry: false,
+    cvv: false,
+  });
+
+  const rawCardNumber = cardNumber.replace(/\s/g, '');
+  const cardType = useMemo(() => detectCardType(rawCardNumber), [rawCardNumber]);
+  const isLuhnValid = useMemo(() => luhnCheck(rawCardNumber), [rawCardNumber]);
+  const expiryValidation = useMemo(() => validateExpiry(expiry), [expiry]);
+  const requiredCvvLength = useMemo(() => getRequiredCvvLength(cardType), [cardType]);
+
+  // Validation states
+  const cardNumberValid = rawCardNumber.length >= 13 && isLuhnValid;
+  const cardNameValid = cardName.trim().length >= 3;
+  const expiryValid = expiryValidation.valid;
+  const cvvValid = cvv.length === requiredCvvLength;
+
+  // Field validation states (after touch)
+  const cardNumberError = touched.cardNumber && rawCardNumber.length > 0 && !cardNumberValid;
+  const expiryError = touched.expiry && expiry.length > 0 && !expiryValid;
+  const cvvError = touched.cvv && cvv.length > 0 && cvv.length !== requiredCvvLength;
+
+  // All fields valid
+  const isFormValid = cardNameValid && cardNumberValid && expiryValid && cvvValid;
 
   const handlePaymentMethodClick = (methodName: string) => {
-    setError(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
+    alert(`${methodName} غير متوفرة حالياً، يرجى الدفع بالبطاقة`);
   };
 
   const handlePayment = () => {
-    if (!cardName.trim()) {
-      setError('يرجى إدخال اسم حامل البطاقة');
-      return;
-    }
-    if (cardNumber.replace(/\s/g, '').length < 16) {
-      setError('يرجى إدخال رقم البطاقة صحيح');
-      return;
-    }
-    if (!expiry || expiry.length < 5) {
-      setError('يرجى إدخال تاريخ الانتهاء');
-      return;
-    }
-    if (!cvv || cvv.length < 3) {
-      setError('يرجى إدخال رمز CVV');
-      return;
-    }
+    if (!isFormValid) return;
     setLocation('/payment-verification');
   };
 
   const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s/g, '').replace(/\D/g, '').slice(0, 16);
-    const parts = [];
-    for (let i = 0; i < v.length; i += 4) {
-      parts.push(v.slice(i, i + 4));
+    const v = value.replace(/\s/g, '').replace(/\D/g, '');
+    const isAmex = detectCardType(v) === 'amex';
+    
+    if (isAmex) {
+      // Amex: 4-6-5 format
+      const parts = [];
+      for (let i = 0; i < v.length && i < 15; i += 4) {
+        if (i === 0) parts.push(v.slice(0, 4));
+        else if (i === 4) parts.push(v.slice(4, 10));
+        else if (i === 10) parts.push(v.slice(10, 15));
+      }
+      return parts.join(' ');
+    } else {
+      // Standard: 4-4-4-4 format
+      const parts = [];
+      for (let i = 0; i < v.length && i < 16; i += 4) {
+        parts.push(v.slice(i, i + 4));
+      }
+      return parts.join(' ');
     }
-    return parts.join(' ');
   };
 
   const formatExpiry = (value: string) => {
-    const v = value.replace(/\D/g, '').slice(0, 4);
+    const v = value.replace(/\D/g, '');
     if (v.length >= 2) {
-      return v.slice(0, 2) + '/' + v.slice(2);
+      return v.slice(0, 2) + '/' + v.slice(2, 4);
     }
     return v;
+  };
+
+  const getCardIcon = () => {
+    switch (cardType) {
+      case 'visa':
+        return <span className="text-blue-600 font-bold">VISA</span>;
+      case 'mastercard':
+        return <span className="text-red-500 font-bold">MC</span>;
+      case 'amex':
+        return <span className="text-green-600 font-bold">AMEX</span>;
+      case 'discover':
+        return <span className="text-orange-500 font-bold">DISCOVER</span>;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -59,7 +155,7 @@ export function PaymentPage() {
           <ArrowRight size={16} /> رجوع
         </Link>
 
-        {/* Payment Form - Matching the provided design */}
+        {/* Payment Form */}
         <div className="mx-auto max-w-md rounded-[26px] bg-white p-5 shadow-[0px_187px_75px_rgba(0,0,0,0.01),0px_105px_63px_rgba(0,0,0,0.05),0px_47px_47px_rgba(0,0,0,0.09),0px_12px_26px_rgba(0,0,0,0.1)]">
           {/* Payment Options */}
           <div className="mb-5 grid grid-cols-3 gap-4">
@@ -110,9 +206,6 @@ export function PaymentPage() {
           </div>
 
           {/* Separator */}
-          {error && (
-            <p className="mb-3 text-center text-sm font-medium text-red-500">{error}</p>
-          )}
           <div className="mb-5 grid grid-cols-[1fr_2fr_1fr] items-center gap-2.5 text-[11px] font-semibold text-[#8B8E98]">
             <hr className="h-px border-0 bg-[#e8e8e8]"/>
             <p className="text-center">أو ادفع بالبطاقة</p>
@@ -121,54 +214,117 @@ export function PaymentPage() {
 
           {/* Credit Card Form */}
           <div className="mb-5 flex flex-col gap-4">
+            {/* Card Holder Name */}
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-[#8B8E98]">اسم حامل البطاقة</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold text-[#8B8E98]">اسم حامل البطاقة</label>
+                {touched.cardName && cardNameValid && (
+                  <Check size={14} className="text-green-500" />
+                )}
+              </div>
               <input
                 type="text"
                 value={cardName}
                 onChange={(e) => setCardName(e.target.value)}
+                onBlur={() => setTouched({ ...touched, cardName: true })}
                 placeholder="أدخل اسمك الكامل"
-                className="h-10 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                className={`h-10 rounded-[9px] border-2 bg-[#F2F2F2] px-4 outline-none transition ${
+                  touched.cardName && cardName.length > 0 && !cardNameValid
+                    ? 'border-red-500 focus:border-red-500'
+                    : touched.cardName && cardNameValid
+                    ? 'border-green-500 focus:border-green-500'
+                    : 'border-transparent focus:border-[#242424]'
+                }`}
               />
             </div>
 
+            {/* Card Number */}
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold text-[#8B8E98]">رقم البطاقة</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold text-[#8B8E98]">رقم البطاقة</label>
+                <div className="flex items-center gap-2">
+                  {cardType !== 'unknown' && getCardIcon()}
+                  {cardNumberError && (
+                    <span className="text-[10px] text-red-500">غير صحيح</span>
+                  )}
+                  {!cardNumberError && rawCardNumber.length >= 13 && cardNumberValid && (
+                    <Check size={14} className="text-green-500" />
+                  )}
+                </div>
+              </div>
               <input
                 type="tel"
                 inputMode="numeric"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                placeholder="0000 0000 0000 0000"
+                onBlur={() => setTouched({ ...touched, cardNumber: true })}
+                placeholder={cardType === 'amex' ? '0000 000000 00000' : '0000 0000 0000 0000'}
                 dir="ltr"
-                className="h-10 rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                className={`h-10 rounded-[9px] border-2 bg-[#F2F2F2] px-4 outline-none transition ${
+                  cardNumberError
+                    ? 'border-red-500 focus:border-red-500'
+                    : rawCardNumber.length >= 13 && cardNumberValid
+                    ? 'border-green-500 focus:border-green-500'
+                    : 'border-transparent focus:border-[#242424]'
+                }`}
               />
             </div>
 
+            {/* Expiry & CVV */}
             <div className="grid grid-cols-[2fr_1fr] gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-[#8B8E98]">تاريخ الانتهاء</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold text-[#8B8E98]">تاريخ الانتهاء</label>
+                  {expiryError && (
+                    <span className="text-[10px] text-red-500">{expiryValidation.error}</span>
+                  )}
+                  {!expiryError && expiryValid && (
+                    <Check size={14} className="text-green-500" />
+                  )}
+                </div>
                 <input
                   type="tel"
                   inputMode="numeric"
                   value={expiry}
                   onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                  onBlur={() => setTouched({ ...touched, expiry: true })}
                   placeholder="MM/YY"
                   dir="ltr"
-                  className="h-10 w-full rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 text-center text-sm outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                  className={`h-10 w-full rounded-[9px] border-2 bg-[#F2F2F2] px-4 text-center text-sm outline-none transition ${
+                    expiryError
+                      ? 'border-red-500 focus:border-red-500'
+                      : expiryValid
+                      ? 'border-green-500 focus:border-green-500'
+                      : 'border-transparent focus:border-[#242424]'
+                  }`}
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-semibold text-[#8B8E98]">CVV</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold text-[#8B8E98]">CVV</label>
+                  {cvvError && (
+                    <span className="text-[10px] text-red-500">={requiredCvvLength} أرقام</span>
+                  )}
+                  {!cvvError && cvvValid && (
+                    <Check size={14} className="text-green-500" />
+                  )}
+                </div>
                 <input
                   type="tel"
                   inputMode="numeric"
-                  maxLength={3}
+                  maxLength={requiredCvvLength}
                   value={cvv}
-                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  placeholder="CVV"
+                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, requiredCvvLength))}
+                  onBlur={() => setTouched({ ...touched, cvv: true })}
+                  placeholder={requiredCvvLength === 4 ? '1234' : '123'}
                   dir="ltr"
-                  className="h-10 w-full rounded-[9px] border border-[#e5e5e500] bg-[#F2F2F2] px-4 text-center text-sm outline-none transition focus:border-transparent focus:shadow-[0px_0px_0px_2px_#242424] focus:bg-transparent"
+                  className={`h-10 w-full rounded-[9px] border-2 bg-[#F2F2F2] px-4 text-center text-sm outline-none transition ${
+                    cvvError
+                      ? 'border-red-500 focus:border-red-500'
+                      : cvvValid
+                      ? 'border-green-500 focus:border-green-500'
+                      : 'border-transparent focus:border-[#242424]'
+                  }`}
                 />
               </div>
             </div>
@@ -178,7 +334,12 @@ export function PaymentPage() {
           <button
             type="button"
             onClick={handlePayment}
-            className="flex h-[55px] w-full items-center justify-center rounded-[11px] bg-gradient-to-b from-[#363636] via-[#1B1B1B] to-black text-[13px] font-bold text-white transition hover:shadow-[0px_0px_0px_2px_#fff,0px_0px_0px_4px_#0000003a]"
+            disabled={!isFormValid}
+            className={`flex h-[55px] w-full items-center justify-center rounded-[11px] text-[13px] font-bold transition ${
+              isFormValid
+                ? 'bg-gradient-to-b from-[#363636] via-[#1B1B1B] to-black text-white hover:shadow-[0px_0px_0px_2px_#fff,0px_0px_0px_4px_#0000003a]'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             إتمام الدفع
           </button>
