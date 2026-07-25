@@ -9,13 +9,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy workspace files
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY lib ./lib
-COPY artifacts/api-server ./artifacts/api-server
+# Copy all workspace files
+COPY . .
 
-# Install dependencies (only for api-server)
-RUN pnpm install --filter @workspace/api-server
+# Install ALL workspace dependencies (required for shared libs)
+RUN pnpm install
 
 # Build the API server
 RUN pnpm --filter @workspace/api-server run build
@@ -24,11 +22,11 @@ RUN pnpm --filter @workspace/api-server run build
 FROM node:22-alpine AS production
 
 # Install dumb-init for proper signal handling and wget for healthcheck
-RUN apk add --no-cache dumb-init wget
+RUN apk add --no-cache dumb-init wget ca-certificates
 
 WORKDIR /app
 
-# Copy built artifacts
+# Copy built artifacts and node_modules
 COPY --from=builder /app/artifacts/api-server/dist ./dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./node_modules
 COPY --from=builder /app/lib ./lib
