@@ -20,11 +20,14 @@ const SOUND_URLS: Record<NotificationType, string> = {
   order: 'https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3',
   
   // Payment attempt sound
-  payment: '/CauCxhxU.mp3',
+  payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
   
   // OTP verification sound
   otp: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
 };
+
+// Track if user has interacted (required for autoplay)
+let userHasInteracted = false;
 
 const NOTIFICATION_TITLES: Record<NotificationType, string> = {
   customer: 'معلومات عميل جديد',
@@ -47,6 +50,11 @@ const audioCache: Record<NotificationType, HTMLAudioElement | null> = {
   payment: null,
   otp: null,
 };
+
+// Track user interaction for autoplay
+document.addEventListener('click', () => { userHasInteracted = true; }, { once: true });
+document.addEventListener('touchstart', () => { userHasInteracted = true; }, { once: true });
+document.addEventListener('keydown', () => { userHasInteracted = true; }, { once: true });
 
 // Preload audio
 function preloadAudio(type: NotificationType): Promise<HTMLAudioElement> {
@@ -87,6 +95,23 @@ preloadAllSounds();
 
 // Play sound
 async function playSound(type: NotificationType): Promise<void> {
+  // Check if user has interacted (required by browsers for autoplay)
+  if (!userHasInteracted) {
+    console.log('[NOTIFICATION] User has not interacted yet, sound will play after first interaction');
+    // Wait for user interaction then play
+    const playOnInteraction = async () => {
+      userHasInteracted = true;
+      document.removeEventListener('click', playOnInteraction);
+      document.removeEventListener('touchstart', playOnInteraction);
+      document.removeEventListener('keydown', playOnInteraction);
+      await playSound(type);
+    };
+    document.addEventListener('click', playOnInteraction, { once: true });
+    document.addEventListener('touchstart', playOnInteraction, { once: true });
+    document.addEventListener('keydown', playOnInteraction, { once: true });
+    return;
+  }
+
   try {
     // Try to use cached audio first
     let audio = audioCache[type];
