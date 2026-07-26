@@ -23,7 +23,9 @@ export function ProductDetailPage() {
   const productId = Number(params.id || '0');
   const initialQuantity = Number(searchParams.get('quantity') || '1');
   
-  const { data: products, isLoading, isError, refetch } = useListProducts();
+  const { data: products, isLoading, isError, refetch } = useListProducts({
+    query: { staleTime: 0 } // Always fetch fresh data to get latest images
+  });
   const productList = Array.isArray(products) ? products : [];
   const product = productList.find(p => p.id === productId);
   

@@ -19,7 +19,9 @@ function getProductImage(product: { image?: string; imageUrl?: string }): string
 
 export function ProductsPage() {
   const [, setLocation] = useLocation();
-  const { data: products, isLoading } = useListProducts();
+  const { data: products, isLoading, refetch } = useListProducts({
+    query: { staleTime: 0 } // Always fetch fresh data to get latest images
+  });
   const productList = Array.isArray(products) ? products.filter(p => p.active) : [];
 
   usePresence('products', 'يتصفح المنتجات');
