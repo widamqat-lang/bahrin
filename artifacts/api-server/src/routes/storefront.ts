@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { asc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, productsTable, siteContentTable } from "@workspace/db";
 import { mapProductRow, mapSiteContentRow } from "./utils";
 
@@ -39,7 +39,7 @@ router.get("/storefront", async (_req, res, next) => {
       })
       .from(productsTable)
       .where(eq(productsTable.active, true))
-      .orderBy(asc(productsTable.name));
+      .orderBy(desc(productsTable.id));
 
     res.json({
       content: content ? mapSiteContentRow(content) : defaultContent,
