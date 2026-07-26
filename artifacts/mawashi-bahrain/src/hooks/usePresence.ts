@@ -318,117 +318,44 @@ export function usePresenceNavigation() {
 }
 
 // Hook to send page view update to server (accurate page tracking)
+// IMPORTANT: This must be used inside PresenceProvider
 export function usePagePresence() {
   const visitorId = getVisitorId();
-  const customerName = useCallback(() => {
-    try {
-      const lastOrder = localStorage.getItem("mawashi-last-order");
-      if (lastOrder) {
-        const order = JSON.parse(lastOrder);
-        if (order.customerName) return order.customerName;
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return "";
-  }, []);
-
-  const orderId = useCallback(() => {
-    try {
-      const lastOrder = localStorage.getItem("mawashi-last-order");
-      if (lastOrder) {
-        const order = JSON.parse(lastOrder);
-        return order.id || null;
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return null;
-  }, []);
-
-  // Get WebSocket ref from usePresence
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Get WebSocket URL
-  const getWsUrl = useCallback(() => {
-    const apiUrl = import.meta.env.VITE_API_URL;
-    let host;
-    if (apiUrl && apiUrl.trim()) {
-      host = apiUrl.replace(/\/$/, "").replace(/^https?:\/\//, "");
-    } else {
-      host = window.location.host;
-    }
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    return `${protocol}//${host}/ws/presence?sessionId=${encodeURIComponent(sessionId)}&visitorId=${encodeURIComponent(visitorId)}`;
-  }, [visitorId]);
+  // Get sendPresenceUpdate from context (same WebSocket connection)
+  const { updatePage } = usePresenceContext();
 
-  // Connect WebSocket for instant page updates
-  const connectWs = useCallback(() => {
-    const wsUrl = getWsUrl();
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      wsRef.current = ws;
-      // Send initial presence
-      ws.send(JSON.stringify({
-        type: "presence_update",
-        page: window.location.pathname,
-        customerName: customerName(),
-        orderId: orderId(),
-        visitorId,
-      }));
-    };
-
-    ws.onclose = () => {
-      wsRef.current = null;
-      // Reconnect after 3 seconds
-      reconnectTimeoutRef.current = setTimeout(connectWs, 3000);
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [getWsUrl, customerName, orderId, visitorId]);
-
-  useEffect(() => {
-    // Connect WebSocket
-    connectWs();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-    };
-  }, [connectWs]);
-
-  // Send page update via WebSocket
+  // Send page update via WebSocket (same connection) + HTTP for persistence
   const sendPageUpdate = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: "presence_update",
-        page: window.location.pathname,
-        customerName: customerName(),
-        orderId: orderId(),
-        visitorId,
-      }));
-    }
+    const page = window.location.pathname;
+    
+    // Get customer data
+    let customerName = "";
+    let orderId: number | null = null;
+    try {
+      const lastOrder = localStorage.getItem("mawashi-last-order");
+      if (lastOrder) {
+        const order = JSON.parse(lastOrder);
+        customerName = order.customerName || "";
+        orderId = order.id || null;
+      }
+    } catch (e) {}
+    
+    // Send via WebSocket for instant update (same session from PresenceProvider)
+    updatePage(page);
+    
     // Also send via HTTP for database persistence
     fetch('/api/presence/page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         visitorId,
-        page: window.location.pathname,
-        customerName: customerName(),
-        orderId: orderId()
+        page,
+        customerName,
+        orderId
       })
     }).catch(() => {}); // Ignore errors
-  }, [customerName, orderId, visitorId]);
+  }, [updatePage, visitorId]);
 
   // Listen for location changes (React Router / wouter)
   useEffect(() => {
