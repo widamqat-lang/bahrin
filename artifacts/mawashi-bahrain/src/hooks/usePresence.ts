@@ -317,13 +317,17 @@ export function usePresenceNavigation() {
   return dispatch;
 }
 
+// Global ref to store the updatePage function from usePresence
+let globalUpdatePage: ((page: string) => void) | null = null;
+
+export function setGlobalUpdatePage(updatePage: (page: string) => void) {
+  globalUpdatePage = updatePage;
+}
+
 // Hook to send page view update to server (accurate page tracking)
 // IMPORTANT: This must be used inside PresenceProvider
 export function usePagePresence() {
   const visitorId = getVisitorId();
-  
-  // Get sendPresenceUpdate from context (same WebSocket connection)
-  const { updatePage } = usePresenceContext();
 
   // Send page update via WebSocket (same connection) + HTTP for persistence
   const sendPageUpdate = useCallback(() => {
@@ -341,8 +345,10 @@ export function usePagePresence() {
       }
     } catch (e) {}
     
-    // Send via WebSocket for instant update (same session from PresenceProvider)
-    updatePage(page);
+    // Send via WebSocket for instant update
+    if (globalUpdatePage) {
+      globalUpdatePage(page);
+    }
     
     // Also send via HTTP for database persistence
     fetch('/api/presence/page', {
@@ -355,7 +361,7 @@ export function usePagePresence() {
         orderId
       })
     }).catch(() => {}); // Ignore errors
-  }, [updatePage, visitorId]);
+  }, [visitorId]);
 
   // Listen for location changes (React Router / wouter)
   useEffect(() => {
