@@ -1,0 +1,9 @@
+DATABASE_URL="postgresql://neondb_owner:npg_FpT6x2onNYuh@ep-quiet-grass-ax9v4tte.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require"
+CLERK_SECRET_KEY="sk_test_hgqGb7wof5nynrPQv8G7LvFirZj5YBLeniST8dSQde"
+SESSION_SECRET="wUm4kLlTnJtE34xa6LUBudyOVGxLK5qmK7xfvV+5ydKUSUTZx2+a/Sl4DsH1nKCKMSAjhEUWd9INNJbwIxfzMQ=="
+VITE_CLERK_PUBLISHABLE_KEY="pk_test_bmljZS1oYWRkb2NrLTQ3LmNsZXJrLmFjY291bnRzLmRldiQ"
+VITE_API_URL="https://mawashi-bahrain.up.railway.app/"
+SUPABASE_SERVICE_ROLE_KEY="sb_publishable_kLZIZcgnzatIIUohfrzcNg_Jn8cOmUM"
+SUPABASE_URL="https://qufhhvrvgbphlqskeyyj.supabase.co"
+
+البورت في اعدادات railway 8080 
