@@ -48,7 +48,6 @@ export function Shell({ children, showSidebar = false }: { children: React.React
           </nav>
 
           <div className="flex items-center gap-1">
-            <Link href="/admin" className="hidden rounded-full px-4 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block">لوحة الإدارة</Link>
             <Link href="/order" className="mr-2 hidden items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary/90 sm:flex">
               <ShoppingBag size={14} /> اطلب الآن
             </Link>
