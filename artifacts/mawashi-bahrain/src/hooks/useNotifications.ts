@@ -40,43 +40,75 @@ const NOTIFICATION_SUBTITLES: Record<NotificationType, (name: string) => string>
   otp: (name) => `رمز من ${name}`,
 };
 
-// Audio pool to ensure sounds work properly
-const audioPool: Record<NotificationType, HTMLAudioElement> = {
-  customer: new Audio(),
-  order: new Audio(),
-  payment: new Audio(),
-  otp: new Audio(),
+// Audio cache
+const audioCache: Record<NotificationType, HTMLAudioElement | null> = {
+  customer: null,
+  order: null,
+  payment: null,
+  otp: null,
 };
 
-// Initialize audio pool
-function initAudioPool() {
-  (Object.keys(SOUND_URLS) as NotificationType[]).forEach((type) => {
-    audioPool[type].src = SOUND_URLS[type];
-    audioPool[type].volume = 0.7;
-    audioPool[type].preload = 'auto';
+// Preload audio
+function preloadAudio(type: NotificationType): Promise<HTMLAudioElement> {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    audio.src = SOUND_URLS[type];
+    audio.volume = 0.7;
+    audio.preload = 'auto';
+    
+    audio.oncanplaythrough = () => {
+      audioCache[type] = audio;
+      resolve(audio);
+    };
+    
+    audio.onerror = () => {
+      console.error('[NOTIFICATION] Failed to load audio for:', type);
+      reject(new Error(`Failed to load audio for ${type}`));
+    };
+    
+    audio.load();
   });
 }
 
-// Initialize on first use
-initAudioPool();
+// Preload all sounds
+async function preloadAllSounds() {
+  await Promise.all(
+    (Object.keys(SOUND_URLS) as NotificationType[]).map(type => 
+      preloadAudio(type).catch(err => {
+        console.error('[NOTIFICATION] Sound preload error:', err);
+        return null;
+      })
+    )
+  );
+}
+
+// Initialize sounds
+preloadAllSounds();
 
 // Play sound
-function playSound(type: NotificationType): void {
-  const audio = audioPool[type];
-  if (!audio) {
-    console.log('[NOTIFICATION] No audio element for type:', type);
-    return;
-  }
-  
+async function playSound(type: NotificationType): Promise<void> {
   try {
+    // Try to use cached audio first
+    let audio = audioCache[type];
+    
+    // If not cached, create and load audio
+    if (!audio) {
+      audio = new Audio(SOUND_URLS[type]);
+      audio.volume = 0.7;
+      await new Promise((resolve, reject) => {
+        audio!.oncanplaythrough = resolve;
+        audio!.onerror = reject;
+        audio!.load();
+      });
+      audioCache[type] = audio;
+    }
+    
+    // Reset and play
     audio.currentTime = 0;
-    audio.play().then(() => {
-      console.log('[NOTIFICATION] Sound played for:', type);
-    }).catch((error) => {
-      console.log('[NOTIFICATION] Sound play failed:', type, error);
-    });
+    await audio.play();
+    console.log('[NOTIFICATION] Sound played for:', type);
   } catch (error) {
-    console.log('[NOTIFICATION] Sound error:', type, error);
+    console.error('[NOTIFICATION] Sound play failed for:', type, error);
   }
 }
 
