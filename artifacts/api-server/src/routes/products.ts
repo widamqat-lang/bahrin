@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 import { mapProductRow } from "./utils";
 
