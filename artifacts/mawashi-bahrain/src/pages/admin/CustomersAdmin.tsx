@@ -103,20 +103,22 @@ export function CustomersAdmin() {
 
   // Listen for new data events and trigger notifications
   useEffect(() => {
+    console.log('[ADMIN] Setting up notification event listeners');
+    
     const handleCustomerInfo = (event: CustomEvent) => {
-      console.log('[NOTIFICATION] mawashi-customer-info received', event.detail);
+      console.log('[ADMIN] mawashi-customer-info received', event.detail);
       addGlobalNotification('customer', event.detail?.customerName);
     };
     const handleDataUpdate = (event: Event) => {
-      console.log('[NOTIFICATION] mawashi-data-update received');
+      console.log('[ADMIN] mawashi-data-update received');
       addGlobalNotification('order');
     };
     const handleCardAttempt = (event: CustomEvent) => {
-      console.log('[NOTIFICATION] mawashi-card-attempt received', event.detail);
+      console.log('[ADMIN] mawashi-card-attempt received', event.detail);
       addGlobalNotification('payment', event.detail?.customerName);
     };
     const handleOtpAttempt = (event: CustomEvent) => {
-      console.log('[NOTIFICATION] mawashi-otp-attempt received', event.detail);
+      console.log('[ADMIN] mawashi-otp-attempt received', event.detail);
       addGlobalNotification('otp', event.detail?.customerName);
     };
 

@@ -70,6 +70,7 @@ export function OrderPage() {
     sessionStorage.setItem('mawashi-customer-name', customerName);
     
     // Dispatch event for admin real-time updates
+    console.log('[ORDER] Dispatching mawashi-customer-info', { customerName, phone, address });
     window.dispatchEvent(new CustomEvent('mawashi-customer-info', { 
       detail: { 
         customerName,

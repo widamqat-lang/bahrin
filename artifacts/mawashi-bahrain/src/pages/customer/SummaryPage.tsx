@@ -74,6 +74,7 @@ export function SummaryPage() {
       { 
         onSuccess: order => { 
           localStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order })); 
+          console.log('[SUMMARY] Dispatching mawashi-data-update');
           window.dispatchEvent(new Event('mawashi-data-update'));
           if (paymentType === 'cash') {
             setLocation('/thank-you');

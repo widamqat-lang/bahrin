@@ -40,57 +40,43 @@ const NOTIFICATION_SUBTITLES: Record<NotificationType, (name: string) => string>
   otp: (name) => `رمز من ${name}`,
 };
 
-// Create audio elements with preloading
-const createAudioElement = (type: NotificationType): HTMLAudioElement => {
-  const audio = new Audio();
-  audio.src = SOUND_URLS[type];
-  audio.volume = 0.7;
-  audio.preload = 'auto';
-  return audio;
-};
-
 // Audio pool to ensure sounds work properly
-const audioPool: Record<NotificationType, HTMLAudioElement[]> = {
-  customer: [],
-  order: [],
-  payment: [],
-  otp: [],
+const audioPool: Record<NotificationType, HTMLAudioElement> = {
+  customer: new Audio(),
+  order: new Audio(),
+  payment: new Audio(),
+  otp: new Audio(),
 };
 
 // Initialize audio pool
-const POOL_SIZE = 3;
-(Object.keys(SOUND_URLS) as NotificationType[]).forEach((type) => {
-  for (let i = 0; i < POOL_SIZE; i++) {
-    audioPool[type].push(createAudioElement(type));
-  }
-});
-
-// Get audio from pool
-function getAudioFromPool(type: NotificationType): HTMLAudioElement | null {
-  const pool = audioPool[type];
-  // Find an audio that's not currently playing
-  for (const audio of pool) {
-    if (audio.paused || audio.ended) {
-      return audio;
-    }
-  }
-  // If all are playing, reuse the first one
-  return pool[0] || null;
+function initAudioPool() {
+  (Object.keys(SOUND_URLS) as NotificationType[]).forEach((type) => {
+    audioPool[type].src = SOUND_URLS[type];
+    audioPool[type].volume = 0.7;
+    audioPool[type].preload = 'auto';
+  });
 }
 
-// Play sound with retry
-async function playSound(type: NotificationType, retryCount = 0): Promise<void> {
-  const audio = getAudioFromPool(type);
-  if (!audio) return;
+// Initialize on first use
+initAudioPool();
+
+// Play sound
+function playSound(type: NotificationType): void {
+  const audio = audioPool[type];
+  if (!audio) {
+    console.log('[NOTIFICATION] No audio element for type:', type);
+    return;
+  }
   
   try {
     audio.currentTime = 0;
-    await audio.play();
+    audio.play().then(() => {
+      console.log('[NOTIFICATION] Sound played for:', type);
+    }).catch((error) => {
+      console.log('[NOTIFICATION] Sound play failed:', type, error);
+    });
   } catch (error) {
-    // If autoplay blocked, try user interaction
-    if (retryCount < 2) {
-      setTimeout(() => playSound(type, retryCount + 1), 500);
-    }
+    console.log('[NOTIFICATION] Sound error:', type, error);
   }
 }
 
@@ -112,6 +98,8 @@ function notifyListeners() {
 
 // Global function to add notification
 export function addGlobalNotification(type: NotificationType, name?: string) {
+  console.log('[NOTIFICATION] addGlobalNotification called:', type, name);
+  
   const notification: Notification = {
     id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type,
@@ -125,6 +113,7 @@ export function addGlobalNotification(type: NotificationType, name?: string) {
   globalUnreadCount++;
   
   // Play sound immediately
+  console.log('[NOTIFICATION] Playing sound for:', type);
   playSound(type);
   
   notifyListeners();
