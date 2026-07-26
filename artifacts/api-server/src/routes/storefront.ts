@@ -32,6 +32,7 @@ router.get("/storefront", async (_req, res, next) => {
         name: productsTable.name,
         description: productsTable.description,
         imageUrl: productsTable.imageUrl,
+        image: productsTable.image,
         maxQuantity: productsTable.maxQuantity,
         price: productsTable.price,
         active: productsTable.active,
