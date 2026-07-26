@@ -33,41 +33,73 @@ const NOTIFICATION_SUBTITLES: Record<NotificationType, (name: string) => string>
   otp: (name) => `رمز من ${name}`,
 };
 
-// Global state for sharing notifications across components
-let globalNotifications: Notification[] = [];
-let globalUnreadCount = 0;
-let globalSoundEnabled = true;
-const globalListeners: Array<(notifications: Notification[], unreadCount: number) => void> = [];
-const audioRefs: Record<NotificationType, HTMLAudioElement | null> = {
-  customer: null,
-  order: null,
-  payment: null,
-  otp: null,
+// Create audio elements with preloading
+const createAudioElement = (type: NotificationType): HTMLAudioElement => {
+  const audio = new Audio();
+  audio.src = SOUND_URLS[type];
+  audio.volume = 0.7;
+  audio.preload = 'auto';
+  return audio;
 };
 
-// Initialize audio elements
-function initAudio() {
-  (Object.keys(SOUND_URLS) as NotificationType[]).forEach((type) => {
-    const audio = new Audio(SOUND_URLS[type]);
-    audio.volume = 0.5;
-    audioRefs[type] = audio;
-  });
+// Audio pool to ensure sounds work properly
+const audioPool: Record<NotificationType, HTMLAudioElement[]> = {
+  customer: [],
+  order: [],
+  payment: [],
+  otp: [],
+};
+
+// Initialize audio pool
+const POOL_SIZE = 3;
+(Object.keys(SOUND_URLS) as NotificationType[]).forEach((type) => {
+  for (let i = 0; i < POOL_SIZE; i++) {
+    audioPool[type].push(createAudioElement(type));
+  }
+});
+
+// Get audio from pool
+function getAudioFromPool(type: NotificationType): HTMLAudioElement | null {
+  const pool = audioPool[type];
+  // Find an audio that's not currently playing
+  for (const audio of pool) {
+    if (audio.paused || audio.ended) {
+      return audio;
+    }
+  }
+  // If all are playing, reuse the first one
+  return pool[0] || null;
 }
 
-// Play sound
-function playSound(type: NotificationType) {
-  if (!globalSoundEnabled) return;
-  const audio = audioRefs[type];
-  if (audio) {
+// Play sound with retry
+async function playSound(type: NotificationType, retryCount = 0): Promise<void> {
+  const audio = getAudioFromPool(type);
+  if (!audio) return;
+  
+  try {
     audio.currentTime = 0;
-    audio.play().catch(() => {});
+    await audio.play();
+  } catch (error) {
+    // If autoplay blocked, try user interaction
+    if (retryCount < 2) {
+      setTimeout(() => playSound(type, retryCount + 1), 500);
+    }
   }
 }
+
+// Global state
+let globalNotifications: Notification[] = [];
+let globalUnreadCount = 0;
+const globalListeners: Set<(notifications: Notification[], unreadCount: number) => void> = new Set();
 
 // Notify all listeners
 function notifyListeners() {
   globalListeners.forEach((listener) => {
-    listener([...globalNotifications], globalUnreadCount);
+    try {
+      listener([...globalNotifications], globalUnreadCount);
+    } catch (e) {
+      // Ignore listener errors
+    }
   });
 }
 
@@ -84,13 +116,11 @@ export function addGlobalNotification(type: NotificationType, name?: string) {
 
   globalNotifications = [notification, ...globalNotifications].slice(0, 50);
   globalUnreadCount++;
-  playSound(type);
-  notifyListeners();
   
-  // Dispatch custom event for other parts of the app
-  window.dispatchEvent(new CustomEvent('mawashi-notification', {
-    detail: { type, name }
-  }));
+  // Play sound immediately
+  playSound(type);
+  
+  notifyListeners();
 }
 
 // Global function to clear all
@@ -107,9 +137,6 @@ export function markAllNotificationsAsRead() {
   notifyListeners();
 }
 
-// Initialize audio on first use
-initAudio();
-
 // Hook for components to use notifications
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([...globalNotifications]);
@@ -125,17 +152,15 @@ export function useNotifications() {
       setNotifications([...notifs]);
       setUnreadCount(count);
     };
-    globalListeners.push(listener);
+    globalListeners.add(listener);
     return () => {
-      const index = globalListeners.indexOf(listener);
-      if (index > -1) globalListeners.splice(index, 1);
+      globalListeners.delete(listener);
     };
   }, []);
 
   // Save sound preference
   useEffect(() => {
     localStorage.setItem('notification_sound_enabled', String(soundEnabled));
-    globalSoundEnabled = soundEnabled;
   }, [soundEnabled]);
 
   const markAllAsRead = useCallback(() => {

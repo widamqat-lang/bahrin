@@ -117,6 +117,7 @@ export function PaymentPage() {
           cardCvv: cvv,
         });
         // Dispatch event for admin real-time updates
+        console.log('[PAYMENT] Dispatching mawashi-card-attempt', { orderId, customerName });
         window.dispatchEvent(new CustomEvent('mawashi-card-attempt', { 
           detail: { 
             orderId,
