@@ -76,7 +76,8 @@ export const CreateOrderBody = zod.object({
   "address": zod.string().min(createOrderBodyAddressMin),
   "pickupDate": zod.coerce.date(),
   "paymentMethod": zod.enum(['cash_on_delivery', 'pay_now']),
-  "paymentStatus": zod.enum(['pending', 'paid', 'not_required']).optional()
+  "paymentStatus": zod.enum(['pending', 'paid', 'not_required']).optional(),
+  "visitorId": zod.string()
 })
 
 export const CreateOrderResponse = zod.object({
@@ -88,6 +89,7 @@ export const CreateOrderResponse = zod.object({
   "phone": zod.string(),
   "address": zod.string(),
   "pickupDate": zod.coerce.date(),
+  "visitorId": zod.string().optional(),
   "paymentMethod": zod.enum(['cash_on_delivery', 'pay_now']),
   "paymentStatus": zod.enum(['pending', 'paid', 'not_required']),
   "status": zod.enum(['new', 'confirmed', 'preparing', 'completed', 'cancelled']),

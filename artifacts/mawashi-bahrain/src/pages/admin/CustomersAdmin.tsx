@@ -303,10 +303,12 @@ export function CustomersAdmin() {
   // Group orders by customer (name + phone) to show unique customers
   const groupedCustomers = useMemo(() => {
     const grouped = ordersList.reduce((acc, order) => {
-      const key = `${order.customerName}-${order.phone}`;
+      // Group by visitorId (device identifier)
+      const key = order.visitorId || `${order.customerName}-${order.phone}`;
       
       if (!acc[key]) {
         acc[key] = {
+          visitorId: order.visitorId || null,
           customerName: order.customerName,
           phone: order.phone,
           orders: [],
@@ -330,6 +332,9 @@ export function CustomersAdmin() {
         
         // Update presence info from the latest order's match
         let presence = presenceClients.find((p) => p.orderId === order.id);
+        if (!presence && order.visitorId) {
+          presence = presenceClients.find((p) => p.visitorId === order.visitorId);
+        }
         if (!presence) {
           presence = presenceClients.find(
             (p) => p.customerName && p.customerName === order.customerName
@@ -344,6 +349,7 @@ export function CustomersAdmin() {
       
       return acc;
     }, {} as Record<string, {
+      visitorId: string | null;
       customerName: string;
       phone: string;
       orders: typeof ordersList;

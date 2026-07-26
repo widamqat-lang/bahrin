@@ -54,6 +54,7 @@ router.post("/orders", async (req, res, next) => {
         paymentMethod: body.paymentMethod,
         paymentStatus,
         status: "new",
+        visitorId: body.visitorId,
       })
       .returning();
 

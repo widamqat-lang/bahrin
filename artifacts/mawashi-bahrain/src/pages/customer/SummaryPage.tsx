@@ -5,6 +5,7 @@ import type { OrderInput } from '@workspace/api-client-react';
 import { ArrowRight, ClipboardList, CreditCard, WalletCards } from 'lucide-react';
 import { Shell } from '../shared';
 import { Button } from '@/components/ui/button';
+import { getVisitorId } from '@/hooks/usePresence';
 
 type OrderDraft = { 
   productId: number; 
@@ -67,7 +68,8 @@ export function SummaryPage() {
       address: draft.address, 
       pickupDate: draft.pickupDate, 
       paymentMethod: 'cash_on_delivery',
-      paymentStatus: paymentType === 'cash' ? 'not_required' : 'pending' 
+      paymentStatus: paymentType === 'cash' ? 'not_required' : 'pending',
+      visitorId: getVisitorId()
     };
     createOrder.mutate(
       { data: payload }, 

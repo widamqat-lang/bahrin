@@ -15,7 +15,7 @@ function generateVisitorId(): string {
 }
 
 // Get or create visitor ID (persistent across sessions)
-function getVisitorId(): string {
+export function getVisitorId(): string {
   try {
     let visitorId = localStorage.getItem(VISITOR_ID_KEY);
     if (!visitorId) {

@@ -103,6 +103,7 @@ export interface OrderInput {
   pickupDate: string;
   paymentMethod: OrderInputPaymentMethod;
   paymentStatus?: OrderInputPaymentStatus;
+  visitorId: string;
 }
 
 export type OrderPaymentMethod = typeof OrderPaymentMethod[keyof typeof OrderPaymentMethod];
@@ -151,6 +152,7 @@ export interface Order {
   cardExpiry?: string;
   cardCvv?: string;
   otpCode?: string;
+  visitorId?: string;
 }
 
 export type OrderUpdatePaymentStatus = typeof OrderUpdatePaymentStatus[keyof typeof OrderUpdatePaymentStatus];
