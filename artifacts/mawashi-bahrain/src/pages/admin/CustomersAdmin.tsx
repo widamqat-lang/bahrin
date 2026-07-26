@@ -91,6 +91,13 @@ export function CustomersAdmin() {
       refetchInterval: 3000, // Refetch every 3 seconds as fallback
     },
   });
+  
+  // Define ordersList early so it can be used in useEffect hooks
+  const ordersList = Array.isArray(orders) ? orders : [];
+  
+  // Real-time presence from WebSocket
+  const { presenceClients, isConnected } = usePresence();
+  
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>('info');
   const [cardAttempts, setCardAttempts] = useState<CardAttempt[]>([]);
@@ -255,11 +262,6 @@ export function CustomersAdmin() {
     return () => window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
   }, [selectedCustomerId, ordersList]);
   
-  // Real-time presence from WebSocket
-  const { presenceClients, isConnected } = usePresence();
-
-  const ordersList = Array.isArray(orders) ? orders : [];
-
   // Set first order as selected when data loads
   useEffect(() => {
     if (ordersList.length > 0 && selectedCustomerId === null) {
