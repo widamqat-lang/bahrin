@@ -19,8 +19,8 @@ const SOUND_URLS: Record<NotificationType, string> = {
   // Same sound for order summary
   order: 'https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3',
   
-  // Alert sound (like call/warning - longer)
-  payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
+  // Payment attempt sound
+  payment: 'https://voca.ro/1jvaf9QV7CsQ',
   
   // OTP verification sound
   otp: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
