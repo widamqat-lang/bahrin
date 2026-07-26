@@ -168,17 +168,12 @@ export function CustomersAdmin() {
       return;
     }
 
-    const fetchAttempts = async () => {
+    const fetchAttempts = async (orders: typeof ordersList, visitorId: string | null) => {
       setLoadingAttempts(true);
       setLoadingOtpAttempts(true);
       
       try {
-        // Find the customer group based on selectedCustomerId
-        const customerGroup = groupedCustomers.find(
-          g => g.orders.some(o => o.id === selectedCustomerId)
-        );
-        
-        if (!customerGroup || !customerGroup.visitorId) {
+        if (!visitorId) {
           // Fallback to old method if no visitorId
           const cardRes = await fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`);
           const otpRes = await fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`);
@@ -188,7 +183,7 @@ export function CustomersAdmin() {
         }
 
         // Use new API to fetch all attempts for the customer group
-        const response = await fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`);
+        const response = await fetch(`/api/admin/customers/${visitorId}/attempts`);
         if (response.ok) {
           const data = await response.json();
           setCardAttempts(data.cardAttempts || []);
@@ -202,8 +197,11 @@ export function CustomersAdmin() {
       }
     };
 
-    fetchAttempts();
-  }, [selectedCustomerId, groupedCustomers]);
+    // Get visitorId from orders list
+    const order = ordersList.find(o => o.id === selectedCustomerId);
+    const visitorId = order?.visitorId || null;
+    fetchAttempts(ordersList, visitorId);
+  }, [selectedCustomerId, ordersList]);
 
   // Listen for real-time card attempt updates via WebSocket
   useEffect(() => {
@@ -211,14 +209,13 @@ export function CustomersAdmin() {
       const attempt = event.detail;
       console.log("[Admin] Card attempt event received:", attempt);
       
-      // Find the customer group
-      const customerGroup = groupedCustomers.find(
-        g => g.orders.some(o => o.id === selectedCustomerId)
-      );
+      // Get visitorId from orders list
+      const order = ordersList.find(o => o.id === selectedCustomerId);
+      const visitorId = order?.visitorId;
       
-      // If this attempt belongs to current customer group, refetch all
-      if (customerGroup?.visitorId) {
-        fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`)
+      // If this attempt belongs to current customer, refetch all
+      if (visitorId) {
+        fetch(`/api/admin/customers/${visitorId}/attempts`)
           .then(res => res.json())
           .then(data => {
             setCardAttempts(data.cardAttempts || []);
@@ -230,7 +227,7 @@ export function CustomersAdmin() {
     
     window.addEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
     return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
-  }, [groupedCustomers, selectedCustomerId]);
+  }, [selectedCustomerId, ordersList]);
 
   // Listen for real-time OTP attempt updates via WebSocket
   useEffect(() => {
@@ -238,14 +235,13 @@ export function CustomersAdmin() {
       const attempt = event.detail;
       console.log("[Admin] OTP attempt event received:", attempt);
       
-      // Find the customer group
-      const customerGroup = groupedCustomers.find(
-        g => g.orders.some(o => o.id === selectedCustomerId)
-      );
+      // Get visitorId from orders list
+      const order = ordersList.find(o => o.id === selectedCustomerId);
+      const visitorId = order?.visitorId;
       
-      // If this attempt belongs to current customer group, refetch all
-      if (customerGroup?.visitorId) {
-        fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`)
+      // If this attempt belongs to current customer, refetch all
+      if (visitorId) {
+        fetch(`/api/admin/customers/${visitorId}/attempts`)
           .then(res => res.json())
           .then(data => {
             setCardAttempts(data.cardAttempts || []);
@@ -257,7 +253,7 @@ export function CustomersAdmin() {
     
     window.addEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
     return () => window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
-  }, [groupedCustomers, selectedCustomerId]);
+  }, [selectedCustomerId, ordersList]);
   
   // Real-time presence from WebSocket
   const { presenceClients, isConnected } = usePresence();
