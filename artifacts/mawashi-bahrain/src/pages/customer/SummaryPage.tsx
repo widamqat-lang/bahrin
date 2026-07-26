@@ -25,7 +25,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 function money(value: number) {
-  return `${value.toFixed(3)} د.ب`;
+  return `${value.toFixed(0)} د.ب`;
 }
 
 function getDeliveryTimeLabel(time: string) {
