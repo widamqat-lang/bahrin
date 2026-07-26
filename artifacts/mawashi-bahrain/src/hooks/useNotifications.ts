@@ -13,11 +13,11 @@ export interface Notification {
 
 // Sound URLs - Notification sounds
 const SOUND_URLS: Record<NotificationType, string> = {
-  // Notification ringtone sound
-  customer: 'https://assets.mixkit.co/active_storage/sfx/2807/2807-preview.mp3',
+  // Notification sound for customer info
+  customer: 'https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3',
   
-  // Same ringtone for order
-  order: 'https://assets.mixkit.co/active_storage/sfx/2807/2807-preview.mp3',
+  // Same sound for order summary
+  order: 'https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3',
   
   // Alert sound (like call/warning - longer)
   payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
