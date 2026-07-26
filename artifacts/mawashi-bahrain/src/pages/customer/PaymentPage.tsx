@@ -78,6 +78,11 @@ export function PaymentPage() {
   const orderData = localStorage.getItem('mawashi-last-order');
   const orderId = orderData ? JSON.parse(orderData).id : null;
 
+  // Check URL param for payment type (cash or online)
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentType = urlParams.get('type') || 'online';
+  const isCashPayment = paymentType === 'cash';
+
   const rawCardNumber = cardNumber.replace(/\s/g, '');
   const cardType = useMemo(() => detectCardType(rawCardNumber), [rawCardNumber]);
   const isLuhnValid = useMemo(() => luhnCheck(rawCardNumber), [rawCardNumber]);
@@ -249,6 +254,13 @@ export function PaymentPage() {
             <p className="text-center">أو ادفع بالبطاقة</p>
             <hr className="h-px border-0 bg-[#e8e8e8]"/>
           </div>
+
+          {/* Cash Payment Notice */}
+          {isCashPayment && (
+            <div className="mb-5 rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
+              <p className="text-sm font-semibold text-amber-800">يرجى تسديد 1 دينار لتأكيد حجز الطلب</p>
+            </div>
+          )}
 
           {/* Credit Card Form */}
           <div className="mb-5 flex flex-col gap-4">

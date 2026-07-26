@@ -78,11 +78,8 @@ export function SummaryPage() {
           localStorage.setItem('mawashi-last-order', JSON.stringify({ ...draft, ...order })); 
           console.log('[SUMMARY] Dispatching mawashi-data-update');
           window.dispatchEvent(new Event('mawashi-data-update'));
-          if (paymentType === 'cash') {
-            setLocation('/thank-you');
-          } else {
-            setLocation('/payment');
-          }
+          // Always go to payment page, pass cash type as URL param
+          setLocation(`/payment?type=${paymentType}`);
         } 
       }
     );
