@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'wouter';
 import {
   BadgeCheck,
@@ -6,7 +6,6 @@ import {
   HeartHandshake,
   Home,
   Menu,
-  Settings2,
   ShoppingBag,
   ShieldCheck,
   Truck,
@@ -24,27 +23,6 @@ const navItems = [
 
 export function Shell({ children, showSidebar = false }: { children: React.ReactNode; showSidebar?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      if (currentScrollY < lastScrollY.current) {
-        // Scrolling up - show header
-        setHeaderVisible(true);
-      } else if (currentScrollY > 100) {
-        // Scrolling down past 100px - hide header
-        setHeaderVisible(false);
-      }
-      
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <div className="app-shell grain">
@@ -57,7 +35,7 @@ export function Shell({ children, showSidebar = false }: { children: React.React
         </div>
       </div>
 
-      <header className={`fixed inset-x-0 top-[32px] z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl transition-transform duration-300 md:top-[36px] ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <header className="border-b border-border/70 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
           <Link href="/"><BrandMark /></Link>
 
@@ -85,7 +63,7 @@ export function Shell({ children, showSidebar = false }: { children: React.React
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-[104px] z-30 border-b border-border bg-card p-4 shadow-card">
+        <div className="absolute inset-x-0 z-30 border-b border-border bg-card p-4 shadow-card">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-muted">
               <Icon size={18} />{label}
@@ -98,9 +76,9 @@ export function Shell({ children, showSidebar = false }: { children: React.React
       )}
 
       {/* Main Content Area */}
-      <div className="mx-auto flex max-w-[1480px] pt-[104px]">
+      <div className="relative mx-auto flex max-w-[1480px]">
         {showSidebar && (
-          <aside className="sticky top-[104px] hidden h-[calc(100dvh-104px)] w-[216px] shrink-0 flex-col border-l border-border/80 px-5 py-10 md:flex">
+          <aside className="sticky top-4 hidden h-[calc(100dvh-32px)] w-[216px] shrink-0 flex-col border-l border-border/80 px-5 py-10 md:flex">
             <div className="mb-8 px-3 font-mono-bahrain text-[9px] uppercase tracking-[.18em] text-muted-foreground" dir="ltr">A GOOD CUT, DELIVERED</div>
             <nav className="space-y-1.5">
               {navItems.map(({ href, label, icon: Icon }) => (
