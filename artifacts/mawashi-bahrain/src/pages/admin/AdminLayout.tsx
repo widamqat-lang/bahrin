@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   BarChart3,
+  Bell,
+  BellRing,
   ChevronDown,
   ChevronLeft,
   ExternalLink,
@@ -16,8 +18,43 @@ import {
   Info,
   Phone,
   Settings,
+  Volume2,
+  VolumeX,
+  User,
+  CreditCard,
+  FileCheck,
+  Shield,
+  X,
+  Check,
 } from 'lucide-react';
 import { BrandMark } from '../shared';
+import { useNotifications, type NotificationType } from '@/hooks/useNotifications';
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `منذ ${minutes} ${minutes === 1 ? 'دقيقة' : 'دقائق'}`;
+  if (hours < 24) return `منذ ${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}`;
+  return date.toLocaleDateString('ar-SA');
+}
+
+function getNotificationIcon(type: NotificationType) {
+  switch (type) {
+    case 'customer':
+      return <User className="h-4 w-4 text-blue-500" />;
+    case 'order':
+      return <FileCheck className="h-4 w-4 text-green-500" />;
+    case 'payment':
+      return <CreditCard className="h-4 w-4 text-purple-500" />;
+    case 'otp':
+      return <Shield className="h-4 w-4 text-orange-500" />;
+  }
+}
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -33,11 +70,43 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   
+  // Notifications system
+  const {
+    notifications,
+    unreadCount,
+    soundEnabled,
+    markAllAsRead,
+    clearAll,
+    toggleSound,
+  } = useNotifications();
+
   // Get admin info from localStorage
   const adminEmail = localStorage.getItem('admin_email') || 'مدير المتجر';
   
+  // Close notifications when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Expose notifications to children via window event
+  useEffect(() => {
+    const eventHandler = (event: CustomEvent) => {
+      window.dispatchEvent(new CustomEvent('mawashi-notification', { detail: event.detail }));
+    };
+    window.addEventListener('mawashi-new-data', eventHandler as EventListener);
+    return () => window.removeEventListener('mawashi-new-data', eventHandler as EventListener);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_email');
@@ -95,6 +164,115 @@ export function AdminLayout({ tab, setTab, children }: AdminLayoutProps) {
             </div>
             <h1 className="mt-1 text-base font-bold">{tabTitles[tab]}</h1>
           </div>
+        </div>
+
+        {/* Notifications Button */}
+        <div className="relative" ref={notificationsRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setNotificationsOpen(!notificationsOpen);
+              if (!notificationsOpen && unreadCount > 0) {
+                markAllAsRead();
+              }
+            }}
+            className={cn(
+              "relative flex items-center gap-2 rounded-xl border bg-card px-3 py-2.5 transition-colors hover:bg-muted",
+              unreadCount > 0 
+                ? "border-red-200 bg-red-50 text-red-600 animate-pulse" 
+                : "border-border"
+            )}
+          >
+            {unreadCount > 0 ? (
+              <BellRing size={18} />
+            ) : (
+              <Bell size={18} />
+            )}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown */}
+          {notificationsOpen && (
+            <div className="absolute left-0 top-full mt-2 w-80 rounded-xl border border-border bg-card shadow-lg z-50 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between p-3 border-b border-border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <BellRing size={16} className="text-primary" />
+                  <span className="text-xs font-bold">الإشعارات</span>
+                  {unreadCount > 0 && (
+                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSound(); }}
+                    className={cn(
+                      "rounded-lg p-1.5 transition-colors",
+                      soundEnabled ? "text-green-600 hover:bg-green-50" : "text-gray-400 hover:bg-gray-100"
+                    )}
+                    title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}
+                  >
+                    {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); clearAll(); }}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    title="مسح الكل"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notifications List */}
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    <Bell size={24} className="mx-auto mb-2 opacity-30" />
+                    <p>لا توجد إشعارات</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={cn(
+                        "flex items-start gap-3 p-3 border-b border-border/50 transition-colors hover:bg-muted/50",
+                        !notification.read && "bg-primary/5"
+                      )}
+                    >
+                      <div className={cn(
+                        "mt-0.5 rounded-full p-1.5",
+                        notification.type === 'customer' && "bg-blue-100",
+                        notification.type === 'order' && "bg-green-100",
+                        notification.type === 'payment' && "bg-purple-100",
+                        notification.type === 'otp' && "bg-orange-100"
+                      )}>
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">{notification.title}</div>
+                        {notification.subtitle && (
+                          <div className="text-xs text-muted-foreground truncate">{notification.subtitle}</div>
+                        )}
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          {formatTimeAgo(notification.timestamp)}
+                        </div>
+                      </div>
+                      {!notification.read && (
+                        <div className="h-2 w-2 rounded-full bg-primary mt-2" />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* القائمة Menu Button with Dropdown */}

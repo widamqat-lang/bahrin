@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useListAdminOrders } from '@workspace/api-client-react';
 import { User, CreditCard, Shield, FileText, ChevronRight, Phone, MapPin, Calendar, RefreshCw, Wifi, WifiOff, Clock, Check, X } from 'lucide-react';
 import { LoadingBlock, ErrorBlock } from '../shared';
 import { usePresence } from '@/hooks/usePresence';
+import { addGlobalNotification, type NotificationType } from '@/hooks/useNotifications';
 
 type CustomerTab = 'info' | 'summary' | 'payment' | 'verification';
 
@@ -96,6 +97,52 @@ export function CustomersAdmin() {
   const [loadingAttempts, setLoadingAttempts] = useState(false);
   const [otpAttempts, setOtpAttempts] = useState<OtpAttempt[]>([]);
   const [loadingOtpAttempts, setLoadingOtpAttempts] = useState(false);
+  
+  // Track previous orders count to detect new orders
+  const prevOrdersCountRef = useRef(0);
+
+  // Listen for new data events and trigger notifications
+  useEffect(() => {
+    const handleCustomerInfo = (event: CustomEvent) => {
+      addGlobalNotification('customer', event.detail?.customerName);
+    };
+    const handleOrderSubmit = (event: CustomEvent) => {
+      addGlobalNotification('order', event.detail?.customerName);
+    };
+    const handlePaymentAttempt = (event: CustomEvent) => {
+      addGlobalNotification('payment', event.detail?.customerName);
+    };
+    const handleOtpAttempt = (event: CustomEvent) => {
+      addGlobalNotification('otp', event.detail?.customerName);
+    };
+
+    window.addEventListener('mawashi-customer-info', handleCustomerInfo as EventListener);
+    window.addEventListener('mawashi-order-submit', handleOrderSubmit as EventListener);
+    window.addEventListener('mawashi-payment-attempt', handlePaymentAttempt as EventListener);
+    window.addEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
+
+    return () => {
+      window.removeEventListener('mawashi-customer-info', handleCustomerInfo as EventListener);
+      window.removeEventListener('mawashi-order-submit', handleOrderSubmit as EventListener);
+      window.removeEventListener('mawashi-payment-attempt', handlePaymentAttempt as EventListener);
+      window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
+    };
+  }, []);
+
+  // Track new orders and send notifications
+  useEffect(() => {
+    if (orders && Array.isArray(orders)) {
+      const currentCount = orders.length;
+      if (prevOrdersCountRef.current > 0 && currentCount > prevOrdersCountRef.current) {
+        // New order added
+        const latestOrder = orders[0];
+        if (latestOrder) {
+          addGlobalNotification('order', latestOrder.customerName || 'عميل جديد');
+        }
+      }
+      prevOrdersCountRef.current = currentCount;
+    }
+  }, [orders]);
 
   // Listen for real-time new order events via WebSocket
   useEffect(() => {
