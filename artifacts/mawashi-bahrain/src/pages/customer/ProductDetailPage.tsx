@@ -150,13 +150,13 @@ export function ProductDetailPage() {
             {/* Total Price */}
             <div className="mt-6 rounded-2xl bg-secondary p-4 text-secondary-foreground">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">السعر التقريبي:</span>
+                <span className="text-sm font-medium">السعر الإجمالي:</span>
                 <span className="font-mono-bahrain text-xl font-bold" dir="ltr">
                   {money(product.price * quantity)}
                 </span>
               </div>
               <p className="mt-1 text-[10px] text-secondary-foreground/70">
-                * السعر النهائي يعتمد على الوزن الفعلي عند التجهيز
+                * السعر شامل التوصيل
               </p>
             </div>
 
