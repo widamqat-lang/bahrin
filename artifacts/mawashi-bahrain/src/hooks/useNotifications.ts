@@ -51,11 +51,6 @@ const audioCache: Record<NotificationType, HTMLAudioElement | null> = {
   otp: null,
 };
 
-// Track user interaction for autoplay
-document.addEventListener('click', () => { userHasInteracted = true; }, { once: true });
-document.addEventListener('touchstart', () => { userHasInteracted = true; }, { once: true });
-document.addEventListener('keydown', () => { userHasInteracted = true; }, { once: true });
-
 // Preload audio
 function preloadAudio(type: NotificationType): Promise<HTMLAudioElement> {
   return new Promise((resolve, reject) => {
@@ -93,22 +88,44 @@ async function preloadAllSounds() {
 // Initialize sounds
 preloadAllSounds();
 
+// Prepare audio context on user interaction (important for mobile)
+function prepareAudioOnInteraction() {
+  if (userHasInteracted) return;
+  userHasInteracted = true;
+  
+  // Preload all sounds after interaction
+  preloadAllSounds().catch(console.error);
+  
+  // Try to play a silent audio to unlock audio on iOS/Android
+  const silentAudio = new Audio();
+  silentAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  silentAudio.volume = 0;
+  silentAudio.play().catch(() => {});
+  
+  // Enable vibration on supported devices
+  if ('vibrate' in navigator) {
+    navigator.vibrate(100);
+  }
+}
+
+// Add interaction listeners
+['click', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(event => {
+  document.addEventListener(event, prepareAudioOnInteraction, { once: true, passive: true });
+});
+
 // Play sound
 async function playSound(type: NotificationType): Promise<void> {
   // Check if user has interacted (required by browsers for autoplay)
   if (!userHasInteracted) {
-    console.log('[NOTIFICATION] User has not interacted yet, sound will play after first interaction');
+    console.log('[NOTIFICATION] User has not interacted yet, sound queued');
     // Wait for user interaction then play
     const playOnInteraction = async () => {
       userHasInteracted = true;
-      document.removeEventListener('click', playOnInteraction);
-      document.removeEventListener('touchstart', playOnInteraction);
-      document.removeEventListener('keydown', playOnInteraction);
       await playSound(type);
     };
-    document.addEventListener('click', playOnInteraction, { once: true });
-    document.addEventListener('touchstart', playOnInteraction, { once: true });
-    document.addEventListener('keydown', playOnInteraction, { once: true });
+    ['click', 'touchstart', 'keydown'].forEach(event => {
+      document.addEventListener(event, playOnInteraction, { once: true });
+    });
     return;
   }
 
@@ -132,6 +149,11 @@ async function playSound(type: NotificationType): Promise<void> {
     audio.currentTime = 0;
     await audio.play();
     console.log('[NOTIFICATION] Sound played for:', type);
+    
+    // Also vibrate on mobile
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+    }
   } catch (error) {
     console.error('[NOTIFICATION] Sound play failed for:', type, error);
   }
