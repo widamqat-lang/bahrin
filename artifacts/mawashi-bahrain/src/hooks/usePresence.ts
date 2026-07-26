@@ -316,3 +316,54 @@ export function usePresenceNavigation() {
 
   return dispatch;
 }
+
+// Hook to send page view update to server (accurate page tracking)
+export function usePagePresence() {
+  const visitorId = getVisitorId();
+  const customerName = useCallback(() => {
+    try {
+      const lastOrder = localStorage.getItem("mawashi-last-order");
+      if (lastOrder) {
+        const order = JSON.parse(lastOrder);
+        if (order.customerName) return order.customerName;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return "";
+  }, []);
+
+  const orderId = useCallback(() => {
+    try {
+      const lastOrder = localStorage.getItem("mawashi-last-order");
+      if (lastOrder) {
+        const order = JSON.parse(lastOrder);
+        return order.id || null;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    const sendPageUpdate = async () => {
+      try {
+        await fetch('/api/presence/page', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorId,
+            page: window.location.pathname,
+            customerName: customerName(),
+            orderId: orderId()
+          })
+        });
+      } catch (error) {
+        console.error("[PagePresence] Failed to send page update:", error);
+      }
+    };
+
+    sendPageUpdate();
+  }, [visitorId, customerName, orderId]);
+}

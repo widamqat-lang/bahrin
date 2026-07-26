@@ -105,6 +105,9 @@ export function CustomersAdmin() {
   const [otpAttempts, setOtpAttempts] = useState<OtpAttempt[]>([]);
   const [loadingOtpAttempts, setLoadingOtpAttempts] = useState(false);
   
+  // Visitors with accurate page tracking
+  const [visitors, setVisitors] = useState<Array<{ visitorId: string; currentPage: string | null; lastSeenAt: string | null }>>([]);
+  
   // Track previous orders count to detect new orders
   const prevOrdersCountRef = useRef(0);
 
@@ -269,6 +272,26 @@ export function CustomersAdmin() {
     }
   }, [ordersList, selectedCustomerId]);
 
+  // Fetch visitors for accurate page tracking
+  useEffect(() => {
+    const fetchVisitors = async () => {
+      try {
+        const response = await fetch('/api/admin/visitors');
+        if (response.ok) {
+          const data = await response.json();
+          setVisitors(data || []);
+        }
+      } catch (error) {
+        console.error("[Admin] Failed to fetch visitors:", error);
+      }
+    };
+
+    fetchVisitors();
+    // Refetch every 5 seconds for accurate page tracking
+    const interval = setInterval(fetchVisitors, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Listen for data updates
   useEffect(() => {
     const handleUpdate = () => {
@@ -280,27 +303,34 @@ export function CustomersAdmin() {
 
   const selectedOrder = ordersList.find(o => o.id === selectedCustomerId);
   
-  // Match presence clients with orders by orderId (primary) or customerName (fallback)
+  // Match presence clients with orders by visitorId (primary) or orderId (fallback)
   const ordersWithPresence = useMemo(() => {
     return ordersList.map((order) => {
-      // First try to match by orderId
+      // First: try to match by visitorId (most accurate - from database)
+      let visitor = order.visitorId 
+        ? visitors.find((v) => v.visitorId === order.visitorId)
+        : null;
+      
+      // Second: try to match by orderId (from WebSocket)
       let presence = presenceClients.find((p) => p.orderId === order.id);
       
-      // Fallback: match by customer name
+      // Third: fallback to customer name
       if (!presence) {
         presence = presenceClients.find(
           (p) => p.customerName && p.customerName === order.customerName
         );
       }
       
+      // Use visitor data for page (from database - more accurate)
+      // Use presence data for isOnline status (real-time from WebSocket)
       return {
         ...order,
-        currentPage: presence?.currentPage || null,
+        currentPage: visitor?.currentPage || presence?.currentPage || null,
         isOnline: presence?.isOnline || false,
-        lastSeenAt: presence?.lastSeenAt || null,
+        lastSeenAt: visitor?.lastSeenAt || presence?.lastSeenAt || null,
       };
     });
-  }, [ordersList, presenceClients]);
+  }, [ordersList, presenceClients, visitors]);
 
   // Group orders by customer (name + phone) to show unique customers
   const groupedCustomers = useMemo(() => {

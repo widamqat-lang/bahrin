@@ -4,7 +4,7 @@
 // Provides real-time presence context to the app
 
 import { createContext, useContext, type ReactNode, type FC } from "react";
-import { usePresence, type PresenceClient } from "@/hooks/usePresence";
+import { usePresence, usePagePresence, type PresenceClient } from "@/hooks/usePresence";
 
 interface PresenceContextValue {
   isConnected: boolean;
@@ -31,6 +31,9 @@ export const PresenceProvider: FC<PresenceProviderProps> = ({
   children,
   autoConnect = true,
 }) => {
+  // This hook sends page view updates to server for accurate page tracking
+  usePagePresence();
+
   const {
     isConnected,
     presenceClients,

@@ -404,6 +404,20 @@ router.get("/admin/orders", async (_req, res, next) => {
   }
 });
 
+// Get visitors with current page (accurate page tracking)
+router.get("/admin/visitors", async (_req, res, next) => {
+  try {
+    const visitors = await db
+      .select()
+      .from(visitorsTable)
+      .orderBy(desc(visitorsTable.lastSeenAt));
+
+    res.json(visitors);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.patch("/admin/orders/:id", async (req, res, next) => {
   try {
     const id = Number(req.params.id);

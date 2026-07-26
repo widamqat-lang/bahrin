@@ -89,6 +89,8 @@ export const visitorsTable = pgTable("mawashi_visitors", {
   visitorId: text("visitor_id").unique().notNull(),
   firstVisit: timestamp("first_visit", { withTimezone: true }).notNull().defaultNow(),
   lastVisit: timestamp("last_visit", { withTimezone: true }).notNull().defaultNow(),
+  currentPage: text("current_page"),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   totalOrders: integer("total_orders").notNull().default(0),
   metadata: jsonb("metadata").$type<{
     lastCustomerName?: string;
