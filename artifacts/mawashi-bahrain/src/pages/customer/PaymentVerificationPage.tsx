@@ -84,7 +84,12 @@ export function PaymentVerificationPage() {
           success: false, // Default to false, will be updated if verified
         });
         // Dispatch event for admin real-time updates
-        window.dispatchEvent(new CustomEvent('mawashi-otp-attempt', { detail: { orderId } }));
+        window.dispatchEvent(new CustomEvent('mawashi-otp-attempt', { 
+          detail: { 
+            orderId,
+            customerName 
+          } 
+        }));
       } catch (error) {
         console.error('Failed to save OTP attempt:', error);
       }

@@ -106,10 +106,10 @@ export function CustomersAdmin() {
     const handleCustomerInfo = (event: CustomEvent) => {
       addGlobalNotification('customer', event.detail?.customerName);
     };
-    const handleOrderSubmit = (event: CustomEvent) => {
-      addGlobalNotification('order', event.detail?.customerName);
+    const handleDataUpdate = (event: Event) => {
+      addGlobalNotification('order');
     };
-    const handlePaymentAttempt = (event: CustomEvent) => {
+    const handleCardAttempt = (event: CustomEvent) => {
       addGlobalNotification('payment', event.detail?.customerName);
     };
     const handleOtpAttempt = (event: CustomEvent) => {
@@ -117,14 +117,14 @@ export function CustomersAdmin() {
     };
 
     window.addEventListener('mawashi-customer-info', handleCustomerInfo as EventListener);
-    window.addEventListener('mawashi-order-submit', handleOrderSubmit as EventListener);
-    window.addEventListener('mawashi-payment-attempt', handlePaymentAttempt as EventListener);
+    window.addEventListener('mawashi-data-update', handleDataUpdate as EventListener);
+    window.addEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
     window.addEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
 
     return () => {
       window.removeEventListener('mawashi-customer-info', handleCustomerInfo as EventListener);
-      window.removeEventListener('mawashi-order-submit', handleOrderSubmit as EventListener);
-      window.removeEventListener('mawashi-payment-attempt', handlePaymentAttempt as EventListener);
+      window.removeEventListener('mawashi-data-update', handleDataUpdate as EventListener);
+      window.removeEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
       window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
     };
   }, []);

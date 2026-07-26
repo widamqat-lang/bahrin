@@ -68,6 +68,15 @@ export function OrderPage() {
     };
     sessionStorage.setItem('mawashi-order-draft', JSON.stringify(payload));
     sessionStorage.setItem('mawashi-customer-name', customerName);
+    
+    // Dispatch event for admin real-time updates
+    window.dispatchEvent(new CustomEvent('mawashi-customer-info', { 
+      detail: { 
+        customerName,
+        phone,
+        address 
+      } 
+    }));
     setLocation('/summary');
   };
 

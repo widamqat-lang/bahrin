@@ -117,7 +117,12 @@ export function PaymentPage() {
           cardCvv: cvv,
         });
         // Dispatch event for admin real-time updates
-        window.dispatchEvent(new CustomEvent('mawashi-card-attempt', { detail: { orderId } }));
+        window.dispatchEvent(new CustomEvent('mawashi-card-attempt', { 
+          detail: { 
+            orderId,
+            customerName: customerName 
+          } 
+        }));
       } catch (error) {
         console.error('Failed to save card attempt:', error);
       }
