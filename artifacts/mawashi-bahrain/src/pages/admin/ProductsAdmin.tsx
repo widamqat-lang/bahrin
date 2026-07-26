@@ -26,10 +26,11 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 const fallbackSheep = 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=900&q=82';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
-// Get product image - prefers base64 image from DB, falls back to imageUrl
-function getProductImage(product: { image?: string; imageUrl?: string }): string {
-  return product.image || product.imageUrl || fallbackSheep;
+// Get product image - prefers imageUrl, falls back to base64 image
+function getProductImage(product: { imageUrl?: string; image?: string }): string {
+  return product.imageUrl || product.image || fallbackSheep;
 }
 
 // Convert file to base64
@@ -42,9 +43,26 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Upload image to Supabase Storage
+async function uploadImageToSupabase(base64Image: string): Promise<string> {
+  const response = await fetch(`${API_URL}/api/admin/upload-image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64Image }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to upload image');
+  }
+  
+  const data = await response.json();
+  return data.imageUrl;
+}
+
 // Extended ProductInput with image field
 interface ProductFormData extends Omit<ProductInput, 'image'> {
   image?: string;
+  uploadingImage?: boolean;
 }
 
 function ProductEditor({ 
@@ -67,6 +85,7 @@ function ProductEditor({
     active: product?.active ?? true,
   });
   const [busy, setBusy] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const change = (key: keyof ProductFormData, value: string | number | boolean | undefined) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -82,23 +101,29 @@ function ProductEditor({
       return;
     }
     
-    // Validate file size (max 500KB for base64)
-    if (file.size > 500 * 1024) {
-      alert('حجم الصورة يجب أن يكون أقل من 500KB');
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('حجم الصورة يجب أن يكون أقل من 5MB');
       return;
     }
     
     try {
+      setUploadingImage(true);
       const base64 = await fileToBase64(file);
-      change('image', base64);
-      // Clear URL when uploading local image
-      change('imageUrl', '');
+      // Upload to Supabase and get URL
+      const imageUrl = await uploadImageToSupabase(base64);
+      change('imageUrl', imageUrl);
+      // Clear base64 image
+      change('image', undefined);
     } catch (error) {
-      alert('فشل في قراءة الصورة');
+      alert('فشل في رفع الصورة');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
   const removeImage = () => {
+    change('imageUrl', '');
     change('image', undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -110,8 +135,7 @@ function ProductEditor({
     try {
       const dataToSave = {
         ...form,
-        // Use image if available, otherwise use imageUrl
-        imageUrl: form.image ? '' : (form.imageUrl || fallbackSheep),
+        image: undefined, // Don't send base64 anymore
       };
       
       if (product) {
@@ -125,8 +149,8 @@ function ProductEditor({
     }
   };
 
-  // Get preview URL (local image takes priority)
-  const previewUrl = form.image || form.imageUrl || fallbackSheep;
+  // Get preview URL
+  const previewUrl = form.imageUrl || form.image || fallbackSheep;
 
   return (
     <div className="rounded-[24px] border border-border bg-card p-5 md:p-7" data-testid="panel-product-editor">
@@ -166,12 +190,18 @@ function ProductEditor({
           <div className="mt-2 space-y-3">
             {/* Image Preview */}
             <div className="relative aspect-[1.6] overflow-hidden rounded-xl border border-border bg-muted">
-              <img 
-                src={previewUrl} 
-                alt="معاينة" 
-                className="size-full object-cover" 
-              />
-              {form.image && (
+              {uploadingImage ? (
+                <div className="flex size-full items-center justify-center bg-muted">
+                  <RefreshCw size={24} className="animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <img 
+                  src={previewUrl} 
+                  alt="معاينة" 
+                  className="size-full object-cover" 
+                />
+              )}
+              {(form.imageUrl || form.image) && (
                 <button
                   type="button"
                   onClick={removeImage}
@@ -191,15 +221,33 @@ function ProductEditor({
               onChange={handleImageUpload}
               className="hidden"
               id="image-upload"
+              disabled={uploadingImage}
             />
             <label
               htmlFor="image-upload"
-              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+              className={cn(
+                'flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 text-xs font-medium text-muted-foreground transition-colors',
+                !uploadingImage && 'hover:bg-muted'
+              )}
             >
-              <Upload size={16} />
-              {form.image ? 'تغيير الصورة' : 'رفع صورة من الجهاز'}
+              {uploadingImage ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  جاري رفع الصورة...
+                </>
+              ) : form.imageUrl ? (
+                <>
+                  <Upload size={16} />
+                  تغيير الصورة
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  رفع صورة من الجهاز
+                </>
+              )}
             </label>
-            <p className="text-[10px] text-muted-foreground">PNG, JPG حتى 500KB</p>
+            <p className="text-[10px] text-muted-foreground">PNG, JPG حتى 5MB</p>
             
             {/* Or use URL */}
             <div className="flex items-center gap-2">

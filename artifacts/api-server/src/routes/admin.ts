@@ -3,6 +3,7 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable, adminTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
+import { supabase, getPublicImageUrl } from "../lib/supabase";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
@@ -490,6 +491,53 @@ router.get("/admin/summary", async (_req, res, next) => {
   }
 });
 
+// POST /admin/upload-image - Upload image to Supabase Storage
+router.post("/admin/upload-image", async (req, res, next) => {
+  try {
+    const { image } = req.body as { image?: string };
+    
+    if (!image) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    // Extract base64 data and mime type
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: "Invalid base64 image format" });
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Generate unique filename
+    const extension = mimeType.split('/')[1] || 'jpg';
+    const filename = `products/${Date.now()}-${crypto.randomBytes(8).toString('hex')}.${extension}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(filename, buffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: "Failed to upload image", details: error.message });
+    }
+
+    // Get public URL
+    const imageUrl = getPublicImageUrl(filename);
+
+    res.json({ imageUrl, filename });
+  } catch (error) {
+    console.error('Upload error:', error);
+    next(error);
+  }
+});
+
+// POST /admin/products - Create new product
 router.post("/admin/products", async (req, res, next) => {
   try {
     const body = CreateProductBody.parse(req.body);
