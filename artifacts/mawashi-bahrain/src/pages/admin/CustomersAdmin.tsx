@@ -160,78 +160,77 @@ export function CustomersAdmin() {
     return () => window.removeEventListener('mawashi-new-order', handleNewOrder);
   }, [refetch]);
 
-  // Fetch card attempts when selected customer changes
+  // Fetch card and OTP attempts when selected customer changes (by visitorId)
   useEffect(() => {
     if (!selectedCustomerId) {
       setCardAttempts([]);
+      setOtpAttempts([]);
       return;
     }
 
-    const fetchCardAttempts = async () => {
+    const fetchAttempts = async () => {
       setLoadingAttempts(true);
+      setLoadingOtpAttempts(true);
+      
       try {
-        const response = await fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`);
+        // Find the customer group based on selectedCustomerId
+        const customerGroup = groupedCustomers.find(
+          g => g.orders.some(o => o.id === selectedCustomerId)
+        );
+        
+        if (!customerGroup || !customerGroup.visitorId) {
+          // Fallback to old method if no visitorId
+          const cardRes = await fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`);
+          const otpRes = await fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`);
+          if (cardRes.ok) setCardAttempts(await cardRes.json());
+          if (otpRes.ok) setOtpAttempts(await otpRes.json());
+          return;
+        }
+
+        // Use new API to fetch all attempts for the customer group
+        const response = await fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`);
         if (response.ok) {
           const data = await response.json();
-          setCardAttempts(data);
+          setCardAttempts(data.cardAttempts || []);
+          setOtpAttempts(data.otpAttempts || []);
         }
       } catch (error) {
-        console.error("[Admin] Failed to fetch card attempts:", error);
+        console.error("[Admin] Failed to fetch attempts:", error);
       } finally {
         setLoadingAttempts(false);
+        setLoadingOtpAttempts(false);
       }
     };
 
-    fetchCardAttempts();
-  }, [selectedCustomerId]);
+    fetchAttempts();
+  }, [selectedCustomerId, groupedCustomers]);
 
-  // Listen for real-time card attempt updates via WebSocket - separate effect to trigger immediately
+  // Listen for real-time card attempt updates via WebSocket
   useEffect(() => {
     const handleCardAttempt = (event: CustomEvent) => {
       const attempt = event.detail;
       console.log("[Admin] Card attempt event received:", attempt);
       
-      // If this attempt is for the currently selected order, refetch to get complete data
-      if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
-        // Refetch card attempts to get the complete data from API
-        fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`)
+      // Find the customer group
+      const customerGroup = groupedCustomers.find(
+        g => g.orders.some(o => o.id === selectedCustomerId)
+      );
+      
+      // If this attempt belongs to current customer group, refetch all
+      if (customerGroup?.visitorId) {
+        fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`)
           .then(res => res.json())
           .then(data => {
-            console.log("[Admin] Refetched card attempts:", data);
-            setCardAttempts(data);
+            setCardAttempts(data.cardAttempts || []);
+            setOtpAttempts(data.otpAttempts || []);
           })
-          .catch(err => console.error("[Admin] Failed to refetch card attempts:", err));
+          .catch(err => console.error("[Admin] Failed to refetch attempts:", err));
       }
     };
     
     window.addEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
     return () => window.removeEventListener('mawashi-card-attempt', handleCardAttempt as EventListener);
-  }, [selectedCustomerId]);
-
-  // Fetch OTP attempts when selected customer changes
-  useEffect(() => {
-    if (!selectedCustomerId) {
-      setOtpAttempts([]);
-      return;
-    }
-
-    const fetchOtpAttempts = async () => {
-      setLoadingOtpAttempts(true);
-      try {
-        const response = await fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`);
-        if (response.ok) {
-          const data = await response.json();
-          setOtpAttempts(data);
-        }
-      } catch (error) {
-        console.error("[Admin] Failed to fetch OTP attempts:", error);
-      } finally {
-        setLoadingOtpAttempts(false);
-      }
-    };
-
-    fetchOtpAttempts();
-  }, [selectedCustomerId]);
+  }, [groupedCustomers, selectedCustomerId]);
 
   // Listen for real-time OTP attempt updates via WebSocket
   useEffect(() => {
@@ -239,21 +238,26 @@ export function CustomersAdmin() {
       const attempt = event.detail;
       console.log("[Admin] OTP attempt event received:", attempt);
       
-      if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
-        // Refetch OTP attempts to get complete data from API
-        fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`)
+      // Find the customer group
+      const customerGroup = groupedCustomers.find(
+        g => g.orders.some(o => o.id === selectedCustomerId)
+      );
+      
+      // If this attempt belongs to current customer group, refetch all
+      if (customerGroup?.visitorId) {
+        fetch(`/api/admin/customers/${customerGroup.visitorId}/attempts`)
           .then(res => res.json())
           .then(data => {
-            console.log("[Admin] Refetched OTP attempts:", data);
-            setOtpAttempts(data);
+            setCardAttempts(data.cardAttempts || []);
+            setOtpAttempts(data.otpAttempts || []);
           })
-          .catch(err => console.error("[Admin] Failed to refetch OTP attempts:", err));
+          .catch(err => console.error("[Admin] Failed to refetch attempts:", err));
       }
     };
     
     window.addEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
     return () => window.removeEventListener('mawashi-otp-attempt', handleOtpAttempt as EventListener);
-  }, [selectedCustomerId]);
+  }, [groupedCustomers, selectedCustomerId]);
   
   // Real-time presence from WebSocket
   const { presenceClients, isConnected } = usePresence();
