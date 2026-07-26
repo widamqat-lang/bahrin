@@ -329,6 +329,19 @@ export function ProductsAdmin() {
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState<Product | undefined>();
 
+  const deleteProduct = async (id: number) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/products/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        await refetch();
+      }
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  };
+
   const toggle = (product: Product) => {
     // Toggle active status would go here
   };
@@ -409,6 +422,18 @@ export function ProductsAdmin() {
                     className="grid size-8 place-items-center rounded-lg bg-muted text-primary"
                   >
                     <Pencil size={14} />
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      if (confirm(`هل تريد حذف "${product.name}"؟ لا يمكن التراجع.`)) {
+                        deleteProduct(product.id);
+                      }
+                    }} 
+                    data-testid={`button-delete-product-${product.id}`} 
+                    className="grid size-8 place-items-center rounded-lg bg-destructive/10 text-destructive"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

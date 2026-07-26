@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, delete:_delete, desc, eq, inArray } from "drizzle-orm";
 import { db, ordersTable, productsTable, presenceTable, siteContentTable, visitorsTable, cardAttemptsTable, otpAttemptsTable, adminTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
@@ -589,6 +589,28 @@ router.patch("/admin/products/:id", async (req, res, next) => {
     }
 
     res.json(mapProductRow(updated[0]));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/admin/products/:id", async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: "Invalid product id" });
+    }
+
+    const deleted = await db
+      .delete(productsTable)
+      .where(eq(productsTable.id, id))
+      .returning({ id: productsTable.id });
+
+    if (deleted.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({ success: true, id: deleted[0].id });
   } catch (error) {
     next(error);
   }
