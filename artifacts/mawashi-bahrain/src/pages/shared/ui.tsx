@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
 import {
   BadgeCheck,
@@ -24,6 +24,27 @@ const navItems = [
 
 export function Shell({ children, showSidebar = false }: { children: React.ReactNode; showSidebar?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY < lastScrollY.current) {
+        // Scrolling up - show header
+        setHeaderVisible(true);
+      } else if (currentScrollY > 100) {
+        // Scrolling down past 100px - hide header
+        setHeaderVisible(false);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="app-shell grain">
@@ -36,7 +57,7 @@ export function Shell({ children, showSidebar = false }: { children: React.React
         </div>
       </div>
 
-      <header className="fixed inset-x-0 top-[32px] z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl md:top-[36px]">
+      <header className={`fixed inset-x-0 top-[32px] z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl transition-transform duration-300 md:top-[36px] ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="mx-auto flex h-[68px] max-w-[1480px] items-center justify-between px-5 lg:px-10">
           <Link href="/"><BrandMark /></Link>
 
@@ -72,9 +93,6 @@ export function Shell({ children, showSidebar = false }: { children: React.React
           ))}
           <Link href="/order" onClick={() => setMobileOpen(false)} className="mt-1 flex items-center gap-3 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">
             <ShoppingBag size={18} /> اطلب الآن
-          </Link>
-          <Link href="/admin" onClick={() => setMobileOpen(false)} className="mt-1 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-muted">
-            <Settings2 size={18} />الإدارة
           </Link>
         </div>
       )}
