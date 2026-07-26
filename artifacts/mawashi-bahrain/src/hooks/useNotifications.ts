@@ -20,7 +20,7 @@ const SOUND_URLS: Record<NotificationType, string> = {
   order: 'https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3',
   
   // Payment attempt sound
-  payment: 'https://files.catbox.moe/n8zy8t.m4a',
+  payment: 'https://d.uguu.se/CauCxhxU.mp3',
   
   // OTP verification sound
   otp: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
