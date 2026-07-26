@@ -14,6 +14,7 @@ export interface Product {
   name: string;
   description: string;
   imageUrl: string;
+  image?: string;
   maxQuantity: number;
   price: number;
   active: boolean;
@@ -24,6 +25,7 @@ export interface ProductInput {
   name: string;
   description: string;
   imageUrl: string;
+  image?: string;
   /**
      * @minimum 1
      * @maximum 100
@@ -39,6 +41,7 @@ export interface ProductUpdate {
   name?: string;
   description?: string;
   imageUrl?: string;
+  image?: string;
   /**
      * @minimum 1
      * @maximum 100
