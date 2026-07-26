@@ -11,12 +11,19 @@ export interface Notification {
   read: boolean;
 }
 
-// Sound URLs using free sound effects
+// Sound URLs - WhatsApp/Messenger style notification sounds
 const SOUND_URLS: Record<NotificationType, string> = {
-  customer: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', // Short ding
-  order: 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3', // Pop sound
-  payment: 'https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3', // Alert/alarm sound (longer)
-  otp: 'https://assets.mixkit.co/active_storage/sfx/3006/3006-preview.mp3', // Messenger-like notification
+  // Short notification sound (like WhatsApp/Messenger notification)
+  customer: 'https://assets.mixkit.co/active_storage/sfx/208/208-preview.mp3',
+  
+  // Pop/soft notification (like message received)
+  order: 'https://assets.mixkit.co/active_storage/sfx/125/125-preview.mp3',
+  
+  // Alert sound (like call/warning - longer)
+  payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
+  
+  // Ringtone style (like phone ring)
+  otp: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3',
 };
 
 const NOTIFICATION_TITLES: Record<NotificationType, string> = {
