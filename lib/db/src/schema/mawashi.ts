@@ -17,6 +17,7 @@ export const productsTable = pgTable("mawashi_products", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
+  image: text("image"), // Base64 image data
   maxQuantity: integer("max_quantity").notNull().default(10),
   price: numeric("price", { precision: 10, scale: 3 }).notNull().default("0"),
   active: boolean("active").notNull().default(true),

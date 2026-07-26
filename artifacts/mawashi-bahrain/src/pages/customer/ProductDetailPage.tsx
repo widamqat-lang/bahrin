@@ -11,6 +11,11 @@ function money(value: number) {
   return `${value.toFixed(3)} د.ب`;
 }
 
+// Get product image - prefers base64 image from DB, falls back to imageUrl
+function getProductImage(product: { image?: string; imageUrl?: string }): string {
+  return product.image || product.imageUrl || fallbackSheep;
+}
+
 export function ProductDetailPage() {
   const [location, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
@@ -60,7 +65,7 @@ export function ProductDetailPage() {
           {/* Product Image */}
           <div className="relative overflow-hidden rounded-3xl bg-muted">
             <img 
-              src={product.imageUrl || fallbackSheep} 
+              src={getProductImage(product)} 
               alt={product.name} 
               className="aspect-square size-full object-cover" 
             />

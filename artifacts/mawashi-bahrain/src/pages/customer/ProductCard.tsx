@@ -10,6 +10,11 @@ function money(value: number) {
   return `${value.toFixed(3)} د.ب`;
 }
 
+// Get product image - prefers base64 image from DB, falls back to imageUrl
+function getProductImage(product: { image?: string; imageUrl?: string }): string {
+  return product.image || product.imageUrl || fallbackSheep;
+}
+
 interface ProductCardProps {
   product: Product;
   compact?: boolean;
@@ -44,7 +49,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       >
         <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
           <img 
-            src={product.imageUrl || fallbackSheep} 
+            src={getProductImage(product)} 
             alt={product.name} 
             className="size-full object-cover transition duration-500 group-hover:scale-105" 
           />
@@ -78,7 +83,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       {/* Product Image */}
       <div className="relative aspect-square overflow-hidden rounded-t-2xl bg-muted">
         <img 
-          src={product.imageUrl || fallbackSheep} 
+          src={getProductImage(product)} 
           alt={product.name} 
           className="size-full object-cover transition duration-700 group-hover:scale-105" 
         />

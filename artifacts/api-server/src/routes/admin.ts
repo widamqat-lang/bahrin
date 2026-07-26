@@ -499,6 +499,7 @@ router.post("/admin/products", async (req, res, next) => {
         name: body.name,
         description: body.description,
         imageUrl: body.imageUrl,
+        image: body.image || null, // Store Base64 image
         maxQuantity: body.maxQuantity,
         price: body.price.toString(),
         active: body.active ?? true,
@@ -523,6 +524,7 @@ router.patch("/admin/products/:id", async (req, res, next) => {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.description !== undefined ? { description: body.description } : {}),
       ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
+      ...(body.image !== undefined ? { image: body.image || null } : {}),
       ...(body.maxQuantity !== undefined ? { maxQuantity: body.maxQuantity } : {}),
       ...(body.price !== undefined ? { price: body.price.toString() } : {}),
       ...(body.active !== undefined ? { active: body.active } : {}),

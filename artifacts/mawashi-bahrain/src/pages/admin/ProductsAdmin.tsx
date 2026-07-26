@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   useListProducts, 
   useCreateProduct, 
@@ -10,7 +10,10 @@ import {
   Plus, 
   RefreshCw, 
   Save, 
-  X 
+  X,
+  Upload,
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react';
 import { LoadingBlock, ErrorBlock } from '../shared';
 import { Button } from '@/components/ui/button';
@@ -24,6 +27,21 @@ function cn(...classes: Array<string | false | null | undefined>) {
 
 const fallbackSheep = 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=900&q=82';
 
+// Convert file to base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
+}
+
+// Extended ProductInput with image field
+interface ProductFormData extends Omit<ProductInput, 'image'> {
+  image?: string;
+}
+
 function ProductEditor({ 
   product, 
   onDone 
@@ -33,33 +51,77 @@ function ProductEditor({
 }) {
   const create = useCreateProduct();
   const update = useUpdateProduct();
-  const [form, setForm] = useState<ProductInput>({
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<ProductFormData>({
     name: product?.name || '',
     description: product?.description || '',
     imageUrl: product?.imageUrl || '',
+    image: product?.image || undefined,
     maxQuantity: product?.maxQuantity || 10,
     price: product?.price || 0,
     active: product?.active ?? true,
   });
   const [busy, setBusy] = useState(false);
 
-  const change = (key: keyof ProductInput, value: string | number | boolean) => {
+  const change = (key: keyof ProductFormData, value: string | number | boolean | undefined) => {
     setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('يرجى اختيار ملف صورة');
+      return;
+    }
+    
+    // Validate file size (max 500KB for base64)
+    if (file.size > 500 * 1024) {
+      alert('حجم الصورة يجب أن يكون أقل من 500KB');
+      return;
+    }
+    
+    try {
+      const base64 = await fileToBase64(file);
+      change('image', base64);
+      // Clear URL when uploading local image
+      change('imageUrl', '');
+    } catch (error) {
+      alert('فشل في قراءة الصورة');
+    }
+  };
+
+  const removeImage = () => {
+    change('image', undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const save = async () => {
     setBusy(true);
     try {
+      const dataToSave = {
+        ...form,
+        // Use image if available, otherwise use imageUrl
+        imageUrl: form.image ? '' : (form.imageUrl || fallbackSheep),
+      };
+      
       if (product) {
-        await update.mutateAsync({ id: product.id, data: form });
+        await update.mutateAsync({ id: product.id, data: dataToSave });
       } else {
-        await create.mutateAsync({ data: form });
+        await create.mutateAsync({ data: dataToSave });
       }
       onDone();
     } finally {
       setBusy(false);
     }
   };
+
+  // Get preview URL (local image takes priority)
+  const previewUrl = form.image || form.imageUrl || fallbackSheep;
 
   return (
     <div className="rounded-[24px] border border-border bg-card p-5 md:p-7" data-testid="panel-product-editor">
@@ -92,17 +154,69 @@ function ProductEditor({
             className="mt-2 rounded-xl" 
           />
         </div>
+        
+        {/* Image Upload Section */}
         <div className="sm:col-span-2">
-          <Label className="text-xs">رابط الصورة</Label>
-          <Input 
-            value={form.imageUrl} 
-            onChange={e => change('imageUrl', e.target.value)} 
-            placeholder="https://..." 
-            dir="ltr" 
-            data-testid="input-admin-product-image" 
-            className="mt-2 h-11 rounded-xl text-left" 
-          />
+          <Label className="text-xs">صورة المنتج</Label>
+          <div className="mt-2 space-y-3">
+            {/* Image Preview */}
+            <div className="relative aspect-[1.6] overflow-hidden rounded-xl border border-border bg-muted">
+              <img 
+                src={previewUrl} 
+                alt="معاينة" 
+                className="size-full object-cover" 
+              />
+              {form.image && (
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute left-2 top-2 rounded-lg bg-red-500 p-1.5 text-white shadow-md hover:bg-red-600"
+                  title="حذف الصورة"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+            
+            {/* Upload Button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="image-upload"
+            />
+            <label
+              htmlFor="image-upload"
+              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              <Upload size={16} />
+              {form.image ? 'تغيير الصورة' : 'رفع صورة من الجهاز'}
+            </label>
+            <p className="text-[10px] text-muted-foreground">PNG, JPG حتى 500KB</p>
+            
+            {/* Or use URL */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 border-t border-border" />
+              <span className="text-[10px] text-muted-foreground">أو</span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+            
+            <Input 
+              value={form.imageUrl} 
+              onChange={e => { 
+                change('imageUrl', e.target.value);
+                if (e.target.value) change('image', undefined);
+              }} 
+              placeholder="رابط الصورة..." 
+              dir="ltr" 
+              data-testid="input-admin-product-image" 
+              className="h-11 rounded-xl text-left" 
+            />
+          </div>
         </div>
+        
         <div>
           <Label className="text-xs">السعر بالدينار</Label>
           <Input 
