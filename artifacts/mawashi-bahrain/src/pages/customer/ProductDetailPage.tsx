@@ -11,9 +11,9 @@ function money(value: number) {
   return `${value.toFixed(0)} د.ب`;
 }
 
-// Get product image - prefers base64 image from DB, falls back to imageUrl
-function getProductImage(product: { image?: string; imageUrl?: string }): string {
-  return product.image || product.imageUrl || fallbackSheep;
+// Get product image - prefers imageUrl (Supabase), falls back to base64 image
+function getProductImage(product: { imageUrl?: string; image?: string }): string {
+  return product.imageUrl || product.image || fallbackSheep;
 }
 
 export function ProductDetailPage() {

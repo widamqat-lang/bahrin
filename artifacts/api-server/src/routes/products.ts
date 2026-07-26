@@ -20,7 +20,7 @@ router.get("/products", async (_req, res, next) => {
       })
       .from(productsTable)
       .where(eq(productsTable.active, true))
-      .orderBy(asc(productsTable.name));
+      .orderBy(desc(productsTable.id));
 
     res.json(products.map(mapProductRow));
   } catch (error) {

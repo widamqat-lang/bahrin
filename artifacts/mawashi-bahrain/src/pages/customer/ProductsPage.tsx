@@ -12,9 +12,9 @@ function money(value: number) {
 
 const fallbackSheep = 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=900&q=82';
 
-// Get product image - prefers base64 image from DB, falls back to imageUrl
-function getProductImage(product: { image?: string; imageUrl?: string }): string {
-  return product.image || product.imageUrl || fallbackSheep;
+// Get product image - prefers imageUrl (Supabase), falls back to base64 image
+function getProductImage(product: { imageUrl?: string; image?: string }): string {
+  return product.imageUrl || product.image || fallbackSheep;
 }
 
 export function ProductsPage() {
