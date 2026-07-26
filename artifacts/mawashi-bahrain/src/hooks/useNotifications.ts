@@ -13,11 +13,11 @@ export interface Notification {
 
 // Sound URLs - WhatsApp/Messenger style notification sounds
 const SOUND_URLS: Record<NotificationType, string> = {
-  // Short notification sound (like WhatsApp/Messenger notification)
+  // Messenger notification sound
   customer: 'https://assets.mixkit.co/active_storage/sfx/208/208-preview.mp3',
   
-  // Pop/soft notification (like message received)
-  order: 'https://assets.mixkit.co/active_storage/sfx/125/125-preview.mp3',
+  // Messenger notification sound (same as customer)
+  order: 'https://assets.mixkit.co/active_storage/sfx/208/208-preview.mp3',
   
   // Alert sound (like call/warning - longer)
   payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
