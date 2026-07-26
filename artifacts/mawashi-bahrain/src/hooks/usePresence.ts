@@ -364,6 +364,17 @@ export function usePagePresence() {
       }
     };
 
+    // Send on page load
     sendPageUpdate();
+
+    // Listen for browser back/forward navigation
+    const handlePopState = () => {
+      sendPageUpdate();
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [visitorId, customerName, orderId]);
 }
