@@ -22,8 +22,8 @@ const SOUND_URLS: Record<NotificationType, string> = {
   // Alert sound (like call/warning - longer)
   payment: 'https://assets.mixkit.co/active_storage/sfx/113/113-preview.mp3',
   
-  // Ringtone style (like phone ring)
-  otp: 'https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3',
+  // OTP verification sound
+  otp: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
 };
 
 const NOTIFICATION_TITLES: Record<NotificationType, string> = {
