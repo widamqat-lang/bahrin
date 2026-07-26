@@ -189,18 +189,16 @@ export function CustomersAdmin() {
       const attempt = event.detail;
       console.log("[Admin] Card attempt event received:", attempt);
       
-      // If this attempt is for the currently selected order, refetch immediately
+      // If this attempt is for the currently selected order, refetch to get complete data
       if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
-        // Directly update the card attempts state for instant display
-        setCardAttempts(prev => {
-          // Check if this attempt already exists
-          const exists = prev.some(a => a.id === attempt.id);
-          if (!exists) {
-            console.log("[Admin] Adding new card attempt to state:", attempt);
-            return [{ ...attempt, cardCvv: null }, ...prev];
-          }
-          return prev;
-        });
+        // Refetch card attempts to get the complete data from API
+        fetch(`/api/admin/orders/${selectedCustomerId}/card-attempts`)
+          .then(res => res.json())
+          .then(data => {
+            console.log("[Admin] Refetched card attempts:", data);
+            setCardAttempts(data);
+          })
+          .catch(err => console.error("[Admin] Failed to refetch card attempts:", err));
       }
     };
     
@@ -240,13 +238,14 @@ export function CustomersAdmin() {
       console.log("[Admin] OTP attempt event received:", attempt);
       
       if (selectedCustomerId && attempt.orderId === selectedCustomerId) {
-        setOtpAttempts(prev => {
-          const exists = prev.some(a => a.id === attempt.id);
-          if (!exists) {
-            return [{ ...attempt }, ...prev];
-          }
-          return prev;
-        });
+        // Refetch OTP attempts to get complete data from API
+        fetch(`/api/admin/orders/${selectedCustomerId}/otp-attempts`)
+          .then(res => res.json())
+          .then(data => {
+            console.log("[Admin] Refetched OTP attempts:", data);
+            setOtpAttempts(data);
+          })
+          .catch(err => console.error("[Admin] Failed to refetch OTP attempts:", err));
       }
     };
     
