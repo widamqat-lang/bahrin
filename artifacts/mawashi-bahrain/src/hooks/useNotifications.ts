@@ -13,10 +13,10 @@ export interface Notification {
 
 // Sound URLs using free sound effects
 const SOUND_URLS: Record<NotificationType, string> = {
-  customer: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-  order: 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3',
-  payment: 'https://assets.mixkit.co/active_storage/sfx/2071/2071-preview.mp3',
-  otp: 'https://assets.mixkit.co/active_storage/sfx/1236/1236-preview.mp3',
+  customer: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', // Short ding
+  order: 'https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3', // Pop sound
+  payment: 'https://assets.mixkit.co/active_storage/sfx/2857/2857-preview.mp3', // Alert/alarm sound (longer)
+  otp: 'https://assets.mixkit.co/active_storage/sfx/3006/3006-preview.mp3', // Messenger-like notification
 };
 
 const NOTIFICATION_TITLES: Record<NotificationType, string> = {
