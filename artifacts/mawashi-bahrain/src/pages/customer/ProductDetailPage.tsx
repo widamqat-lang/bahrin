@@ -107,7 +107,7 @@ export function ProductDetailPage() {
             {/* Price */}
             <div className="mt-8 flex items-end justify-between">
               <div>
-                <div className="text-xs text-muted-foreground">السعر للكيلو الواحد</div>
+                <div className="text-xs text-muted-foreground">السعر  </div>
                 <div className="mt-1 font-mono-bahrain text-3xl font-bold text-primary" dir="ltr">
                   {money(product.price)}
                 </div>
