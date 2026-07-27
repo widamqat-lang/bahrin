@@ -105,7 +105,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
           <span className="font-mono-bahrain text-sm font-medium text-primary" dir="ltr" data-testid={`text-product-price-${product.id}`}>
             {money(product.price)}
           </span>
-          <span className="text-[9px] text-muted-foreground">للكيلو</span>
+          <span className="text-[9px] text-muted-foreground">الاجمالي</span>
         </div>
 
         {/* Quantity Selector */}
