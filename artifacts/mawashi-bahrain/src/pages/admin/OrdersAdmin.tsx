@@ -9,6 +9,12 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
+function getPreparationTypeLabel(type?: string) {
+  if (type === 'slaughtered') return 'مذبوح مقطع';
+  if (type === 'live') return 'حي بدون ذبح';
+  return '-';
+}
+
 export function OrdersAdmin() {
   const { data, isLoading, isError, refetch } = useListAdminOrders();
   const [search, setSearch] = useState('');
@@ -50,6 +56,7 @@ export function OrdersAdmin() {
                 <th className="p-4">العميل</th>
                 <th className="p-4">المنتج</th>
                 <th className="p-4">الموعد</th>
+                <th className="p-4">الاستلام</th>
                 <th className="p-4">الحالة</th>
               </tr>
             </thead>
@@ -66,6 +73,9 @@ export function OrdersAdmin() {
                     <div className="mt-1 text-[10px] text-muted-foreground">{order.quantity} رأس</div>
                   </td>
                   <td className="p-4" dir="ltr">{order.pickupDate}</td>
+                  <td className="p-4">
+                    <span className="text-[10px]">{getPreparationTypeLabel(order.preparationType)}</span>
+                  </td>
                   <td className="p-4">
                     <span className="rounded-full bg-accent/30 px-3 py-1 text-[10px] font-bold text-secondary">
                       {order.status === 'new' ? 'جديد' : order.status}

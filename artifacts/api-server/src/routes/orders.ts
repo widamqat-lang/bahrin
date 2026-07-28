@@ -51,6 +51,7 @@ router.post("/orders", async (req, res, next) => {
         phone: body.phone,
         address: body.address,
         pickupDate: body.pickupDate.toISOString().slice(0, 10),
+        preparationType: body.preparationType,
         paymentMethod: body.paymentMethod,
         paymentStatus,
         status: "new",

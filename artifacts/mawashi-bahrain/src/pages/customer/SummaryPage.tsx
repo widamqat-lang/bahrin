@@ -17,6 +17,7 @@ type OrderDraft = {
   address: string; 
   pickupDate: string; 
   deliveryTime: string;
+  preparationType: 'slaughtered' | 'live';
   paymentMethod: 'cash_on_delivery' | 'pay_now' 
 };
 
@@ -32,6 +33,12 @@ function getDeliveryTimeLabel(time: string) {
   if (time === 'morning') return 'صباحاً';
   if (time === 'evening') return 'مساءً';
   return time;
+}
+
+function getPreparationTypeLabel(type: string) {
+  if (type === 'slaughtered') return 'مذبوح مقطع';
+  if (type === 'live') return 'حي بدون ذبح';
+  return type;
 }
 
 export function SummaryPage() {
@@ -67,6 +74,7 @@ export function SummaryPage() {
       phone: draft.phone, 
       address: draft.address, 
       pickupDate: draft.pickupDate, 
+      preparationType: draft.preparationType,
       paymentMethod: 'cash_on_delivery',
       paymentStatus: paymentType === 'cash' ? 'not_required' : 'pending',
       visitorId: getVisitorId()
@@ -122,6 +130,10 @@ export function SummaryPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">وقت التوصيل</span>
               <b>{getDeliveryTimeLabel(draft.deliveryTime)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">طريقة الاستلام</span>
+              <b>{getPreparationTypeLabel(draft.preparationType)}</b>
             </div>
           </div>
 

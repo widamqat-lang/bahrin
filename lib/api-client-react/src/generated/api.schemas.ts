@@ -90,6 +90,14 @@ export const OrderInputPaymentStatus = {
   not_required: 'not_required',
 } as const;
 
+export type OrderInputPreparationType = typeof OrderInputPreparationType[keyof typeof OrderInputPreparationType];
+
+
+export const OrderInputPreparationType = {
+  slaughtered: 'slaughtered',
+  live: 'live',
+} as const;
+
 export interface OrderInput {
   productId: number;
   /**
@@ -104,6 +112,7 @@ export interface OrderInput {
   /** @minLength 3 */
   address: string;
   pickupDate: string;
+  preparationType?: OrderInputPreparationType;
   paymentMethod: OrderInputPaymentMethod;
   paymentStatus?: OrderInputPaymentStatus;
   visitorId: string;
@@ -137,6 +146,14 @@ export const OrderStatus = {
   cancelled: 'cancelled',
 } as const;
 
+export type OrderPreparationType = typeof OrderPreparationType[keyof typeof OrderPreparationType];
+
+
+export const OrderPreparationType = {
+  slaughtered: 'slaughtered',
+  live: 'live',
+} as const;
+
 export interface Order {
   id: number;
   productId: number;
@@ -146,6 +163,7 @@ export interface Order {
   phone: string;
   address: string;
   pickupDate: string;
+  preparationType?: OrderPreparationType;
   paymentMethod: OrderPaymentMethod;
   paymentStatus: OrderPaymentStatus;
   status: OrderStatus;

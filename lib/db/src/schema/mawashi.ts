@@ -43,6 +43,7 @@ export const ordersTable = pgTable("mawashi_orders", {
   phone: text("phone").notNull(),
   address: text("address").notNull(),
   pickupDate: date("pickup_date", { mode: "string" }).notNull(),
+  preparationType: text("preparation_type"), // 'slaughtered' or 'live'
   paymentMethod: text("payment_method").notNull(),
   paymentStatus: text("payment_status").notNull().default("not_required"),
   status: text("status").notNull().default("new"),

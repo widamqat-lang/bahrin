@@ -26,6 +26,7 @@ export function OrderPage() {
   const [address, setAddress] = useState('');
   const [pickupDate, setPickupDate] = useState(today());
   const [deliveryTime, setDeliveryTime] = useState('');
+  const [preparationType, setPreparationType] = useState<'slaughtered' | 'live'>('slaughtered');
   const [error, setError] = useState('');
 
   if (isLoading) return <Shell><LoadingBlock label="نجهّز لكم الاختيارات" /></Shell>;
@@ -64,6 +65,7 @@ export function OrderPage() {
       address, 
       pickupDate, 
       deliveryTime,
+      preparationType,
       paymentMethod: 'cash_on_delivery' as const 
     };
     sessionStorage.setItem('mawashi-order-draft', JSON.stringify(payload));
@@ -168,6 +170,21 @@ export function OrderPage() {
                   <option value="evening">توصيل مساءً</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="preparation-type" className="text-sm font-medium">طريقة الاستلام <span className="text-primary">*</span></Label>
+              <select
+                id="preparation-type"
+                value={preparationType}
+                onChange={e => setPreparationType(e.target.value as 'slaughtered' | 'live')}
+                data-testid="select-preparation-type"
+                className="mt-1.5 flex h-12 w-full items-center rounded-xl border border-input bg-background px-3 text-sm"
+                required
+              >
+                <option value="slaughtered">مذبوح مقطع</option>
+                <option value="live">حي بدون ذبح</option>
+              </select>
             </div>
           </div>
 

@@ -290,6 +290,10 @@ components:
         phone: { type: string, minLength: 5 }
         address: { type: string, minLength: 3 }
         pickupDate: { type: string, format: date }
+        preparationType:
+          type: string
+          enum: [slaughtered, live]
+          description: طريقة التحضير - slaughtered (مذبوح مقطع) أو live (حي بدون ذبح)
         paymentMethod:
           type: string
           enum: [cash_on_delivery, pay_now]
@@ -308,6 +312,9 @@ components:
         phone: { type: string }
         address: { type: string }
         pickupDate: { type: string, format: date }
+        preparationType:
+          type: string
+          enum: [slaughtered, live]
         paymentMethod:
           type: string
           enum: [cash_on_delivery, pay_now]
