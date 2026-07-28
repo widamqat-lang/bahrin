@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db, adminDevicesTable } from "@workspace/db";
 import { sendTestNotification } from "../lib/firebase-admin";
 
@@ -38,6 +38,19 @@ router.post("/admin/devices", async (req, res, next) => {
       return;
     }
 
+    // Deactivate any existing devices with same browser and OS to avoid duplicates
+    if (browser && os) {
+      await db
+        .update(adminDevicesTable)
+        .set({ isActive: false })
+        .where(and(
+          eq(adminDevicesTable.browser, browser),
+          eq(adminDevicesTable.os, os),
+          eq(adminDevicesTable.isActive, true)
+        ));
+      console.log(`[Devices] Deactivated old devices for ${browser} on ${os}`);
+    }
+
     // Insert new device
     const [newDevice] = await db
       .insert(adminDevicesTable)
@@ -50,6 +63,8 @@ router.post("/admin/devices", async (req, res, next) => {
         isActive: true,
       })
       .returning();
+
+    console.log(`[Devices] Registered new device: ${newDevice.deviceName} (${newDevice.id})`);
 
     res.status(201).json({ 
       success: true, 
