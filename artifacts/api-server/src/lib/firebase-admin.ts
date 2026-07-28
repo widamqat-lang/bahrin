@@ -45,7 +45,7 @@ export interface NotificationPayload {
 export async function sendPushNotification(
   fcmToken: string,
   payload: NotificationPayload
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string; errorCode?: string }> {
   try {
     const message: admin.messaging.Message = {
       token: fcmToken,
@@ -95,22 +95,35 @@ export async function sendPushNotification(
     };
 
     const messageId = await messaging.send(message);
+    console.log('[Firebase] Notification sent successfully:', messageId);
     return { success: true, messageId };
   } catch (error: any) {
-    console.error("Error sending push notification:", error);
+    console.error("[Firebase] Error sending notification:", error.code, error.message);
     
     // Handle specific Firebase errors
     if (error.code === "messaging/registration-token-not-registered") {
-      return { success: false, error: "TOKEN_NOT_REGISTERED: الجهاز غير مسجل" };
+      return { success: false, error: "الجهاز غير مسجل في FCM", errorCode: "TOKEN_NOT_REGISTERED" };
     }
     if (error.code === "messaging/invalid-argument") {
-      return { success: false, error: "INVALID_TOKEN: رمز الجهاز غير صالح" };
+      return { success: false, error: "رمز الجهاز غير صالح", errorCode: "INVALID_TOKEN" };
     }
     if (error.code === "messaging/quota-exceeded") {
-      return { success: false, error: "QUOTA_EXCEEDED: تم تجاوز الحد المسموح للإشعارات" };
+      return { success: false, error: "تم تجاوز الحد المسموح للإشعارات", errorCode: "QUOTA_EXCEEDED" };
+    }
+    if (error.code === "messaging/authentication-error") {
+      return { success: false, error: "خطأ في المصادقة مع Firebase - تحقق من إعدادات VAPID", errorCode: "AUTH_ERROR" };
+    }
+    if (error.code === "messaging/server-unavailable") {
+      return { success: false, error: "Firebase غير متاح حالياً", errorCode: "SERVER_UNAVAILABLE" };
+    }
+    if (error.code === "messaging/invalid-registration-token") {
+      return { success: false, error: "رمز التسجيل غير صالح", errorCode: "INVALID_REGISTRATION_TOKEN" };
     }
     
-    return { success: false, error: error.message || "خطأ غير معروف" };
+    // Log the full error for debugging
+    console.error("[Firebase] Full error:", JSON.stringify(error));
+    
+    return { success: false, error: error.message || "خطأ غير معروف", errorCode: error.code || "UNKNOWN" };
   }
 }
 
