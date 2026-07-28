@@ -35,14 +35,10 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
           
           // If authorized, check if notifications are enabled after 5 seconds
           if (data.valid) {
-            // Check if already enabled
-            const notificationsEnabled = localStorage.getItem('notifications_enabled');
-            if (!notificationsEnabled) {
-              // Show notification modal after 5 seconds
-              setTimeout(() => {
-                setShowNotificationsModal(true);
-              }, 5000);
-            }
+            // Show notification modal after 5 seconds (always show, user can dismiss)
+            setTimeout(() => {
+              setShowNotificationsModal(true);
+            }, 5000);
           }
         } else {
           // Token invalid or expired
@@ -62,7 +58,15 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleNotificationsEnabled = () => {
+    // Save successful notification registration
     localStorage.setItem('notifications_enabled', 'true');
+    sessionStorage.setItem('notifications_shown', 'true');
+    setShowNotificationsModal(false);
+  };
+
+  const handleNotificationsDismissed = () => {
+    // Mark as dismissed for this session
+    sessionStorage.setItem('notifications_shown', 'true');
     setShowNotificationsModal(false);
   };
 
@@ -84,12 +88,16 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Check if we should skip showing the modal (only for this session)
+  const wasShownThisSession = sessionStorage.getItem('notifications_shown') === 'true';
+  const shouldShowModal = showNotificationsModal && !wasShownThisSession;
+
   return (
     <>
       {children}
       <EnableNotificationsModal 
-        isOpen={showNotificationsModal} 
-        onClose={() => setShowNotificationsModal(false)}
+        isOpen={shouldShowModal} 
+        onClose={handleNotificationsDismissed}
         onEnabled={handleNotificationsEnabled}
       />
     </>
