@@ -163,3 +163,4 @@ overrides:
 allowBuilds:
   '@clerk/shared': false
   esbuild: false
+  protobufjs: true
