@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, Mail, Eye, EyeOff, Check, X, Loader2 } from 'lucide-react';
+import { Shield, Lock, Mail, Eye, EyeOff, Check, X, Loader2, Bell, Smartphone, Trash2 } from 'lucide-react';
+import { getNotificationPermissionStatus } from '@/lib/firebase';
+
+interface Device {
+  id: number;
+  fcmToken: string;
+  deviceName: string;
+  deviceType: string;
+  browser: string;
+  os: string;
+  isActive: boolean;
+  lastUsedAt: string;
+  createdAt: string;
+}
 
 export function SettingsAdmin() {
   const [email, setEmail] = useState('');
@@ -11,8 +24,10 @@ export function SettingsAdmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(true);
+  const [removingDevice, setRemovingDevice] = useState<number | null>(null);
 
-  // Fetch current admin email
   useEffect(() => {
     async function fetchAdmin() {
       try {
@@ -30,30 +45,39 @@ export function SettingsAdmin() {
     fetchAdmin();
   }, []);
 
+  useEffect(() => {
+    async function fetchDevices() {
+      try {
+        const response = await fetch('/api/admin/devices');
+        if (response.ok) {
+          const data = await response.json();
+          setDevices(data);
+        }
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+      } finally {
+        setLoadingDevices(false);
+      }
+    }
+    fetchDevices();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
-
-    // Validate passwords match
     if (newPassword && newPassword !== confirmPassword) {
       setMessage({ type: 'error', text: 'كلمتا المرور غير متطابقتين' });
       return;
     }
-
-    // Validate password length
     if (newPassword && newPassword.length < 6) {
       setMessage({ type: 'error', text: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
       return;
     }
-
-    // Require current password to update
     if (!currentPassword) {
       setMessage({ type: 'error', text: 'كلمة المرور الحالية مطلوبة' });
       return;
     }
-
     setIsSaving(true);
-
     try {
       const response = await fetch('/api/admin/credentials', {
         method: 'PUT',
@@ -64,9 +88,7 @@ export function SettingsAdmin() {
           password: newPassword || undefined
         })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setMessage({ type: 'success', text: 'تم تحديث البيانات بنجاح' });
         setCurrentPassword('');
@@ -81,6 +103,23 @@ export function SettingsAdmin() {
       setIsSaving(false);
     }
   };
+
+  const handleRemoveDevice = async (device: Device) => {
+    if (!confirm('هل أنت متأكد من إلغاء تسجيل هذا الجهاز؟')) return;
+    setRemovingDevice(device.id);
+    try {
+      const response = await fetch(`/api/admin/devices/${device.fcmToken}`, { method: 'DELETE' });
+      if (response.ok) {
+        setDevices(devices.filter(d => d.id !== device.id));
+      }
+    } catch (error) {
+      console.error('Error removing device:', error);
+    } finally {
+      setRemovingDevice(null);
+    }
+  };
+
+  const notificationPermission = getNotificationPermissionStatus();
 
   if (isLoading) {
     return (
@@ -97,7 +136,6 @@ export function SettingsAdmin() {
         <p className="text-muted-foreground mt-1">تغيير البريد وكلمة المرور</p>
       </div>
 
-      {/* Message */}
       {message && (
         <div className={`mb-6 flex items-center gap-3 rounded-lg p-4 ${
           message.type === 'success' 
@@ -110,7 +148,6 @@ export function SettingsAdmin() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Email Section */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -121,7 +158,6 @@ export function SettingsAdmin() {
               <p className="text-xs text-muted-foreground">البريد المسجل في لوحة التحكم</p>
             </div>
           </div>
-
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">البريد الإلكتروني</label>
             <input
@@ -130,13 +166,11 @@ export function SettingsAdmin() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="admin@example.com"
               required
             />
           </div>
         </div>
 
-        {/* Password Section */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -147,7 +181,6 @@ export function SettingsAdmin() {
               <p className="text-xs text-muted-foreground">لتغيير كلمة المرور أو البريد</p>
             </div>
           </div>
-
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="currentPassword" className="text-sm font-medium">كلمة المرور الحالية <span className="text-red-500">*</span></label>
@@ -158,19 +191,13 @@ export function SettingsAdmin() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="أدخل كلمة المرور الحالية"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
-
             <div className="space-y-2">
               <label htmlFor="newPassword" className="text-sm font-medium">كلمة المرور الجديدة</label>
               <div className="relative">
@@ -180,52 +207,77 @@ export function SettingsAdmin() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="اتركها فارغة إذا لا تريد التغيير"
                   minLength={6}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
+                <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">6 أحرف على الأقل (اتركها فارغة إذا لا تريد التغيير)</p>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">تأكيد كلمة المرور</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="أعد إدخال كلمة المرور الجديدة"
-                disabled={!newPassword}
-              />
             </div>
           </div>
         </div>
 
-        {/* Submit Button */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Bell size={20} className="text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold">الأجهزة المسجلة</h3>
+              <p className="text-xs text-muted-foreground">الأجهزة التي تستلم إشعارات الطلبات</p>
+            </div>
+          </div>
+          <div className="mb-4 flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">حالة الإشعارات:</span>
+            <span className={`font-medium ${
+              notificationPermission === 'granted' ? 'text-green-600' : 
+              notificationPermission === 'denied' ? 'text-red-600' : 'text-yellow-600'
+            }`}>
+              {notificationPermission === 'granted' ? 'مفعّلة' :
+               notificationPermission === 'denied' ? 'مرفوضة' : 'غير مفعّلة'}
+            </span>
+          </div>
+          {loadingDevices ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : devices.length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              <Smartphone className="mx-auto size-8 mb-2 opacity-50" />
+              <p>لا توجد أجهزة مسجلة</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {devices.map(device => (
+                <div key={device.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-muted flex items-center justify-center">
+                      <Smartphone size={16} className="text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{device.deviceName}</p>
+                      <p className="text-xs text-muted-foreground">{device.browser} على {device.os}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveDevice(device)}
+                    disabled={removingDevice === device.id}
+                    className="p-2 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                  >
+                    {removingDevice === device.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           type="submit"
           disabled={isSaving}
           className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {isSaving ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              جاري الحفظ...
-            </>
-          ) : (
-            <>
-              <Check size={18} />
-              حفظ التغييرات
-            </>
-          )}
+          {isSaving ? <><Loader2 size={18} className="animate-spin" />جاري الحفظ...</> : <><Check size={18} />حفظ التغييرات</>}
         </button>
       </form>
     </div>

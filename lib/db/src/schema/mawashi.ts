@@ -111,11 +111,25 @@ export const presenceTable = pgTable("mawashi_presence", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Table to store admin FCM tokens for push notifications
+export const adminDevicesTable = pgTable("mawashi_admin_devices", {
+  id: serial("id").primaryKey(),
+  fcmToken: text("fcm_token").notNull().unique(),
+  deviceName: text("device_name"), // e.g., "Chrome on Mac", "Safari on iPhone"
+  deviceType: text("device_type"), // 'desktop', 'mobile', 'tablet'
+  browser: text("browser"), // 'Chrome', 'Safari', 'Firefox', etc.
+  os: text("os"), // 'iOS', 'Android', 'Windows', 'Mac', etc.
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
 export const insertSiteContentSchema = createInsertSchema(siteContentTable).omit({ id: true, updatedAt: true });
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
 export const insertVisitorSchema = createInsertSchema(visitorsTable);
 export const insertPresenceSchema = createInsertSchema(presenceTable);
+export const insertAdminDeviceSchema = createInsertSchema(adminDevicesTable).omit({ id: true, lastUsedAt: true, createdAt: true });
 
 export const productPriceSchema = z.coerce.number().nonnegative();
 export type Product = typeof productsTable.$inferSelect;
@@ -126,3 +140,4 @@ export type Presence = typeof presenceTable.$inferSelect;
 export type CardAttempt = typeof cardAttemptsTable.$inferSelect;
 export type OtpAttempt = typeof otpAttemptsTable.$inferSelect;
 export type Admin = typeof adminTable.$inferSelect;
+export type AdminDevice = typeof adminDevicesTable.$inferSelect;

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { db, ordersTable, productsTable } from "@workspace/db";
+import { db, ordersTable, productsTable, adminDevicesTable } from "@workspace/db";
 import { CreateOrderBody } from "@workspace/api-zod";
+import { sendPushNotification } from "../lib/firebase-admin";
 
 // Dynamic import to avoid circular dependency
 let presenceManager: any = null;
@@ -15,6 +16,40 @@ async function getPresenceManager() {
     }
   }
   return presenceManager;
+}
+
+// Send push notification to all admin devices
+async function notifyAdminsOfNewOrder(order: any) {
+  try {
+    const devices = await db
+      .select()
+      .from(adminDevicesTable)
+      .where(eq(adminDevicesTable.isActive, true));
+
+    const preparationLabel = order.preparationType === 'slaughtered' ? 'مذبوح مقطع' : 
+                           order.preparationType === 'live' ? 'حي بدون ذبح' : '';
+
+    for (const device of devices) {
+      await sendPushNotification(device.fcmToken, {
+        title: "🆕 طلب جديد!",
+        body: `${order.customerName} - ${order.productName} (${order.quantity}) ${preparationLabel ? `- ${preparationLabel}` : ''}`,
+        tag: `order-${order.id}`,
+        data: {
+          type: "new_order",
+          orderId: order.id.toString(),
+          customerName: order.customerName,
+          phone: order.phone,
+          productName: order.productName,
+          quantity: order.quantity.toString(),
+          timestamp: order.createdAt.toISOString(),
+        },
+      });
+    }
+
+    console.log(`[PUSH] Sent notifications to ${devices.length} admin devices`);
+  } catch (error) {
+    console.error("[PUSH] Error sending notifications:", error);
+  }
 }
 
 const router = Router();
@@ -73,6 +108,9 @@ router.post("/orders", async (req, res, next) => {
         },
       });
     }
+
+    // Send push notifications to all admin devices (async, don't wait)
+    notifyAdminsOfNewOrder(order);
 
     res.status(201).json(order);
   } catch (error) {

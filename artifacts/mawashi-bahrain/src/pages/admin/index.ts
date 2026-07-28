@@ -8,3 +8,4 @@ export { PresenceAdmin } from './PresenceAdmin';
 export { SettingsAdmin } from './SettingsAdmin';
 export { CustomersAdmin } from './CustomersAdmin';
 export { AdminLogin } from './AdminLogin';
+export { EnableNotificationsModal } from './EnableNotificationsModal';

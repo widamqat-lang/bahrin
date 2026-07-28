@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { EnableNotificationsModal } from './EnableNotificationsModal';
 
 export function AdminGate({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -30,6 +32,18 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setIsAuthorized(data.valid);
+          
+          // If authorized, check if notifications are enabled after 5 seconds
+          if (data.valid) {
+            // Check if already enabled
+            const notificationsEnabled = localStorage.getItem('notifications_enabled');
+            if (!notificationsEnabled) {
+              // Show notification modal after 5 seconds
+              setTimeout(() => {
+                setShowNotificationsModal(true);
+              }, 5000);
+            }
+          }
         } else {
           // Token invalid or expired
           localStorage.removeItem('admin_token');
@@ -46,6 +60,11 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
 
     checkAdminAccess();
   }, []);
+
+  const handleNotificationsEnabled = () => {
+    localStorage.setItem('notifications_enabled', 'true');
+    setShowNotificationsModal(false);
+  };
 
   if (isChecking) {
     return (
@@ -65,5 +84,14 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <EnableNotificationsModal 
+        isOpen={showNotificationsModal} 
+        onClose={() => setShowNotificationsModal(false)}
+        onEnabled={handleNotificationsEnabled}
+      />
+    </>
+  );
 }
