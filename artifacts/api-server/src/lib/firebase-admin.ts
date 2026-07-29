@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import { eq } from "drizzle-orm";
 import { db, adminDevicesTable } from "@workspace/db";
 
 // Firebase Admin configuration from environment variables
